@@ -6,6 +6,10 @@ This agent autonomously scans code repositories for EU AI Act compliance
 using ArkForge's paid scan API. Each scan costs 0.50 EUR, charged
 automatically to a pre-configured payment method via Stripe.
 
+Two modes:
+  1. With API key (saved card): automatic charge via /api/v1/paid-scan
+  2. Without API key: calls /agent-pay for Checkout Session URL
+
 TRANSPARENCY NOTICE:
 This agent and the ArkForge scan API are both built and controlled by
 the same developer (David Desiorac). This is a proof-of-concept
@@ -13,8 +17,12 @@ demonstrating autonomous agent-to-agent paid transactions, not an
 attempt to simulate independent entities.
 
 Usage:
+    # Mode 1: Automatic with saved card
     export ARKFORGE_SCAN_API_KEY="mcp_scan_..."
     python3 agent.py https://github.com/owner/repo
+
+    # Mode 2: Get checkout URL
+    python3 agent.py --checkout
 """
 
 import json
@@ -29,6 +37,17 @@ API_BASE = os.environ.get("ARKFORGE_API_BASE", "https://arkforge.fr")
 API_KEY = os.environ.get("ARKFORGE_SCAN_API_KEY", "")
 TIMEOUT_SECONDS = 120
 LOG_DIR = Path(__file__).parent / "logs"
+
+
+def request_checkout() -> dict:
+    """Call /agent-pay to get a Stripe Checkout Session URL."""
+    resp = requests.post(
+        f"{API_BASE}/agent-pay",
+        timeout=30,
+    )
+    if resp.status_code != 200:
+        return {"error": f"HTTP {resp.status_code}", "detail": resp.text}
+    return resp.json()
 
 
 def scan_repo(repo_url: str) -> dict:
@@ -53,14 +72,34 @@ def scan_repo(repo_url: str) -> dict:
 
 
 def main():
+    now = datetime.now(timezone.utc)
+    ts = now.isoformat()
+
+    # Mode: checkout only (no scan)
+    if "--checkout" in sys.argv:
+        print(f"[{ts}] Requesting Stripe Checkout Session...")
+        result = request_checkout()
+        if "error" in result:
+            print(f"[ERROR] {result['error']}")
+            sys.exit(1)
+        print(f"  Checkout URL: {result.get('url', 'N/A')}")
+        print(f"  Payment Link: {result.get('payment_link', 'N/A')}")
+        print(f"  Session ID: {result.get('session_id', 'N/A')}")
+        print(f"  Amount: {result.get('amount_eur', '0.50')} EUR")
+        LOG_DIR.mkdir(exist_ok=True)
+        log_file = LOG_DIR / f"checkout_{now.strftime('%Y%m%d_%H%M%S')}.json"
+        log_file.write_text(json.dumps({"timestamp": ts, **result}, indent=2))
+        print(f"\n  Log saved: {log_file}")
+        return result
+
+    # Mode: paid scan (requires API key + saved card)
     if len(sys.argv) < 2:
-        print("Usage: python3 agent.py <repo_url>")
-        print("  e.g.: python3 agent.py https://github.com/langchain-ai/langchain")
+        print("Usage:")
+        print("  python3 agent.py <repo_url>        # scan with saved card")
+        print("  python3 agent.py --checkout         # get checkout URL")
         sys.exit(1)
 
     repo_url = sys.argv[1]
-    now = datetime.now(timezone.utc)
-    ts = now.isoformat()
 
     print(f"[{ts}] EU AI Act Compliance Agent")
     print(f"[{ts}] Scanning: {repo_url}")

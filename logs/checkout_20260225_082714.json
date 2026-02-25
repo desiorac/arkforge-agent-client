@@ -1,0 +1,9 @@
+{
+  "timestamp": "2026-02-25T08:27:14.915677+00:00",
+  "url": "https://checkout.stripe.com/c/pay/cs_live_a1ISOZqOF2OtmPLAgwbgK9JFnlVnkDfDPBRa5572128IOcfoRYRmdHoQM7#fidnandhYHdWcXxpYCc%2FJ2FgY2RwaXEnKSdkdWxOYHwnPyd1blppbHNgWjA0Vn09VXYzbGxtQG11PFA8fXFqfENCU3JsZFQ2fEJ8NW1xcV9hNUB%2FfVVtQE0zf1dNb39DQlI1fH1LXENKX3NKclQxbF19N2lAVWFPakRdVGZATjRdYXBCNTV0b0RvNm5XQCcpJ2N3amhWYHdzYHcnP3F3cGApJ2dkZm5id2pwa2FGamlqdyc%2FJyZjY2NjY2MnKSdpZHxqcHFRfHVgJz8ndmxrYmlgWmxxYGgnKSdga2RnaWBVaWRmYG1qaWFgd3YnP3F3cGB4JSUl",
+  "payment_link": "https://buy.stripe.com/eVqcMYeJGbn64qI3A44AU0b",
+  "session_id": "cs_live_a1ISOZqOF2OtmPLAgwbgK9JFnlVnkDfDPBRa5572128IOcfoRYRmdHoQM7",
+  "amount_eur": "0.50",
+  "currency": "eur",
+  "mode": "payment"
+}

@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-02-25T09:01:37+00:00",
+  "agent": "eu-ai-act-compliance-agent",
+  "service": "arkforge-mcp-eu-ai-act",
+  "payment_proof": {
+    "payment_intent_id": "pi_3T4dyP6iihEhp9U90jOWPQui",
+    "charge_id": "ch_3T4dyP6iihEhp9U90ohrBjpE",
+    "amount_eur": "0.50",
+    "currency": "eur",
+    "status": "succeeded",
+    "card_brand": "amex",
+    "card_last4": "1006",
+    "card_country": "FR",
+    "receipt_url": "https://pay.stripe.com/receipts/payment/CAcQARoXChVhY2N0XzFTeDhQczZpaWhFaHA5VTko3PX6zAYyBtJpDFBWVTosFmk3F2ooCCA7eDqryV-rg6QgVaIdyipO_O_4cgUhkNmCJ3aIYyMUqhoWEhM",
+    "created_timestamp": "2026-02-25T09:01:37+00:00"
+  },
+  "payment_link_used": "https://buy.stripe.com/eVqcMYeJGbn64qI3A44AU0b",
+  "endpoint_tested": "https://arkforge.fr/agent-pay",
+  "transparency": "Both agents (client and service) are built and controlled by the same developer (David Desiorac). The buyer card belongs to a third party (spouse). This is a proof-of-concept for autonomous agent-to-agent paid transactions."
+}
