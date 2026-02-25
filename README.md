@@ -11,11 +11,14 @@ Both this agent (buyer) and the ArkForge scan API (seller) are built and
 controlled by the same developer. This is a proof-of-concept for autonomous
 agent-to-agent paid transactions — not an attempt to simulate independent entities.
 
-## Setup
+## Prerequisites
 
-```bash
-pip install -r requirements.txt
-```
+- Python 3.10+
+- `pip install requests`
+
+That's it. No git, no Stripe SDK, no system dependencies.
+
+## Quick Start
 
 ### 1. Save a payment method
 
@@ -23,32 +26,34 @@ pip install -r requirements.txt
 python3 setup_card.py your@email.com
 ```
 
-Open the Checkout URL and enter a card. Then check the setup:
-
-```bash
-python3 check_setup.py <session_id>
-```
+Open the Checkout URL in a browser and enter a card.
+Your API key will be sent by email automatically.
 
 ### 2. Run a scan
 
 ```bash
-export ARKFORGE_SCAN_API_KEY="mcp_scan_..."
+export ARKFORGE_SCAN_API_KEY="mcp_pro_..."
 python3 agent.py https://github.com/owner/repo
 ```
 
-### 3. Full transaction with proofs
+Output includes:
+- **Payment proof** — Stripe intent ID, amount, receipt URL
+- **Scan result** — risk score, detected frameworks, files scanned
+- **Local log** — saved in `logs/` as JSON
 
-```bash
-export ARKFORGE_SCAN_API_KEY="mcp_scan_..."
-python3 execute_transaction.py https://github.com/owner/repo
+## How It Works
+
+```
+agent.py → POST /api/v1/paid-scan → Stripe charges 0.50 EUR → scan runs → results returned
 ```
 
-This captures 5 independent proofs:
-1. Stripe payment receipt
-2. Git commit (public, timestamped)
-3. OpenTimestamps (Bitcoin blockchain anchor)
-4. Archive.org snapshot
-5. Email to project owner
+The agent sends a repo URL + API key. The server:
+1. Validates the API key
+2. Charges 0.50 EUR on the saved card (Stripe off-session)
+3. Runs the EU AI Act compliance scan
+4. Returns payment proof + scan results
+
+All proof capture (Stripe receipt, timestamps) happens server-side.
 
 ## License
 

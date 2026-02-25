@@ -1,69 +1,62 @@
 #!/usr/bin/env python3
 """
-Setup Payment Method for Agent Client
+Setup Payment Method — Save a card for paid scans.
 
-Creates a Stripe Checkout Session (setup mode) so the shareholder
-can add their separate card for the agent client.
-
-After card is added:
-1. Stripe webhook creates an API key automatically
-2. OR run check_setup.py to create it manually
+Creates a Stripe Checkout Session (setup mode) to save a card.
+After setup, the webhook automatically creates your API key.
 
 Usage:
-    python3 setup_card.py [email]
+    python3 setup_card.py your@email.com
 """
 
 import json
+import os
 import sys
 
 import requests
 
-API_BASE = "https://arkforge.fr"
-DEFAULT_EMAIL = "agent-client@arkforge.fr"
+API_BASE = os.environ.get("ARKFORGE_API_BASE", "https://arkforge.fr")
 
 
-def create_setup_session(email: str) -> dict:
-    """Create a Stripe Checkout Session to save a payment method."""
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: python3 setup_card.py <email>")
+        print()
+        print("Example:")
+        print("  python3 setup_card.py user@example.com")
+        sys.exit(1)
+
+    email = sys.argv[1]
+
+    print("=" * 60)
+    print("SETUP PAYMENT METHOD")
+    print("=" * 60)
+    print(f"Email: {email}")
+    print()
+
     resp = requests.post(
         f"{API_BASE}/api/v1/setup-payment-method",
         json={"email": email},
         timeout=30,
     )
+
     if resp.status_code != 200:
-        return {"error": f"HTTP {resp.status_code}: {resp.text}"}
-    return resp.json()
-
-
-def main():
-    email = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_EMAIL
-
-    print("=" * 60)
-    print("SETUP PAYMENT METHOD — Agent Client")
-    print("=" * 60)
-    print(f"Email: {email}")
-    print()
-
-    result = create_setup_session(email)
-
-    if "error" in result:
-        print(f"[ERROR] {result['error']}")
+        print(f"[ERROR] HTTP {resp.status_code}: {resp.text}")
         sys.exit(1)
 
-    print("Checkout URL (enter card here):")
+    result = resp.json()
+
+    print("Open this URL to enter your card:")
+    print()
     print(f"  {result['checkout_url']}")
     print()
-    print(f"Session ID: {result['session_id']}")
+    print("After completing checkout:")
+    print("  1. Your API key will be sent by email automatically")
+    print("  2. Set it: export ARKFORGE_SCAN_API_KEY='mcp_pro_...'")
+    print("  3. Run:    python3 agent.py https://github.com/owner/repo")
     print()
-    print("NEXT STEPS:")
-    print("  1. Open the Checkout URL in a browser")
-    print("  2. Enter the SEPARATE card (carte tierce)")
-    print("  3. Complete the setup")
-    print("  4. An API key will be created automatically (webhook)")
-    print("  5. OR run: python3 check_setup.py <session_id>")
-    print()
-    print("Then set the API key:")
-    print("  export ARKFORGE_SCAN_API_KEY='mcp_scan_...'")
-    print("  python3 execute_transaction.py")
+    print(f"Session ID: {result.get('session_id', 'N/A')}")
+    print("=" * 60)
 
 
 if __name__ == "__main__":
