@@ -59,21 +59,28 @@ def proof_2_git_commit(tx: dict) -> dict:
     proof_file = PROOFS_DIR / "transaction_proof.json"
     proof_file.write_text(json.dumps(tx, indent=2, ensure_ascii=False))
 
+    import shutil
+    git_bin = shutil.which("git")
+    if not git_bin:
+        return {"status": "skipped", "error": "git not found in PATH"}
+
     try:
         # Stage and commit the proof
-        subprocess.run(["git", "add", str(proof_file)], check=True, capture_output=True, cwd=proof_file.parent.parent)
+        subprocess.run([git_bin, "add", str(proof_file)], check=True, capture_output=True, cwd=proof_file.parent.parent)
         result = subprocess.run(
-            ["git", "commit", "-m", f"proof: agent-to-agent transaction {tx.get('timestamp', 'unknown')}"],
+            [git_bin, "commit", "-m", f"proof: agent-to-agent transaction {tx.get('timestamp', 'unknown')}"],
             check=True, capture_output=True, text=True, cwd=proof_file.parent.parent,
         )
         # Get commit hash
         hash_result = subprocess.run(
-            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=proof_file.parent.parent,
+            [git_bin, "rev-parse", "HEAD"], capture_output=True, text=True, cwd=proof_file.parent.parent,
         )
         commit_hash = hash_result.stdout.strip()
         return {"status": "committed", "commit_hash": commit_hash}
     except subprocess.CalledProcessError as e:
         return {"status": "failed", "error": e.stderr if hasattr(e, 'stderr') else str(e)}
+    except FileNotFoundError:
+        return {"status": "skipped", "error": "git binary not accessible"}
 
 
 def proof_3_opentimestamps(tx: dict) -> dict:

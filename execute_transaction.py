@@ -134,21 +134,26 @@ def execute():
 
     # Step 3: Push to GitHub
     print("\n[STEP 3] Pushing to GitHub...")
-    try:
-        subprocess.run(["git", "add", "-A"], capture_output=True, cwd=Path(__file__).parent)
-        subprocess.run(
-            ["git", "commit", "-m", f"proof: agent-to-agent transaction {ts}"],
-            capture_output=True, text=True, cwd=Path(__file__).parent,
-        )
-        push_result = subprocess.run(
-            ["git", "push"], capture_output=True, text=True, cwd=Path(__file__).parent,
-        )
-        if push_result.returncode == 0:
-            print("  → Pushed to public repo")
-        else:
-            print(f"  → Push failed: {push_result.stderr[:200]}")
-    except Exception as e:
-        print(f"  → Git error: {e}")
+    import shutil
+    git_bin = shutil.which("git")
+    if not git_bin:
+        print("  → Skipped: git not found in PATH")
+    else:
+        try:
+            subprocess.run([git_bin, "add", "-A"], capture_output=True, cwd=Path(__file__).parent)
+            subprocess.run(
+                [git_bin, "commit", "-m", f"proof: agent-to-agent transaction {ts}"],
+                capture_output=True, text=True, cwd=Path(__file__).parent,
+            )
+            push_result = subprocess.run(
+                [git_bin, "push"], capture_output=True, text=True, cwd=Path(__file__).parent,
+            )
+            if push_result.returncode == 0:
+                print("  → Pushed to public repo")
+            else:
+                print(f"  → Push failed: {push_result.stderr[:200]}")
+        except Exception as e:
+            print(f"  → Git error: {e}")
 
     # Summary
     verified = sum(1 for k in ["stripe", "git_commit", "opentimestamps", "archive_org", "email"]
