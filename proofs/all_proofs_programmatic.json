@@ -22,8 +22,9 @@
       "charge_id": "py_3T4eS66iihEhp9U90N7DKPP0"
     },
     "git_commit": {
-      "status": "pending",
-      "note": "this file will be committed"
+      "status": "committed",
+      "commit_hash": "23f892f",
+      "repo": "github.com/desiorac/arkforge-agent-client"
     },
     "opentimestamps": {
       "status": "stamped",
@@ -35,7 +36,9 @@
       "archive_url": "https://web.archive.org/web/20260225090431/https://arkforge.fr/agent-pay"
     },
     "email": {
-      "status": "pending"
+      "status": "sent",
+      "to": "contact@arkforge.fr",
+      "subject": "Proof: First Programmatic Agent Payment — 0 Human Clicks"
     }
   },
   "differentiation_from_manual": {
