@@ -12,7 +12,7 @@ Two modes:
 
 TRANSPARENCY NOTICE:
 This agent and the ArkForge scan API are both built and controlled by
-the same developer (David Desiorac). This is a proof-of-concept
+the same team (ArkForge). This is a proof-of-concept
 demonstrating autonomous agent-to-agent paid transactions, not an
 attempt to simulate independent entities.
 

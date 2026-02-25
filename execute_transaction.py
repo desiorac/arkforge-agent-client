@@ -91,7 +91,7 @@ def execute():
             "files_scanned": scan.get("scan", {}).get("files_scanned", 0),
         },
         "full_result": result,
-        "transparency": "Both agents built and controlled by the same developer (David Desiorac)",
+        "transparency": "Both agents built and controlled by ArkForge",
     }
 
     log_file = LOG_DIR / f"tx_{now.strftime('%Y%m%d_%H%M%S')}.json"

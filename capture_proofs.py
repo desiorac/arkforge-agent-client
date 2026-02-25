@@ -164,7 +164,7 @@ def proof_5_email(tx: dict, all_proofs: dict) -> dict:
     smtp_port = int(config.get("SMTP_PORT", "465"))
     smtp_user = config.get("IMAP_USER", "contact@arkforge.fr")
     smtp_pass = config.get("IMAP_PASSWORD", "")
-    to_email = "apps.desiorac@gmail.com"
+    to_email = "contact@arkforge.fr"
 
     if not smtp_pass:
         return {"status": "failed", "error": "SMTP password not configured"}
@@ -188,7 +188,7 @@ ALL PROOFS SUMMARY:
 
 TRANSPARENCY NOTICE:
 Both agents (client and service) are built and controlled by the same
-developer (David Desiorac). This is a proof-of-concept for autonomous
+team (ArkForge). This is a proof-of-concept for autonomous
 agent-to-agent paid transactions.
 
 SHA-256 of transaction data:
