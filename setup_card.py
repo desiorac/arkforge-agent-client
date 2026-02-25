@@ -49,7 +49,7 @@ def main():
         body["mode"] = "test"
 
     resp = requests.post(
-        f"{API_BASE}/api/v1/setup-payment-method",
+        f"{API_BASE}/trust/v1/keys/setup",
         json=body,
         timeout=30,
     )
