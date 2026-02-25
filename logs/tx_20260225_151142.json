@@ -1,0 +1,155 @@
+{
+  "command": "scan",
+  "timestamp": "2026-02-25T15:11:42.802488+00:00",
+  "repo_url": "https://github.com/openai/openai-quickstart-python",
+  "payment_proof": {
+    "payment_intent_id": "pi_3T4jkZ6iihEhp9U90yunwlGk",
+    "amount_eur": 0.5,
+    "currency": "eur",
+    "status": "succeeded",
+    "receipt_url": "https://pay.stripe.com/receipts/payment/CAcaFwoVYWNjdF8xU3g4UHM2aWloRWhwOVU5KLCi_MwGMgZ8lXWfJYw6LBbLP0JOc0bjjQPx1ow0SUijZNo37WLpgZ_trOGGstyGQtg6j1yrj-BEZXGR"
+  },
+  "scan_summary": {
+    "compliance_score": "2/3",
+    "compliance_percentage": 66.7,
+    "risk_category": "limited",
+    "frameworks_detected": [
+      "openai",
+      "anthropic"
+    ],
+    "files_scanned": 5
+  },
+  "full_result": {
+    "payment_proof": {
+      "payment_intent_id": "pi_3T4jkZ6iihEhp9U90yunwlGk",
+      "amount_eur": 0.5,
+      "currency": "eur",
+      "status": "succeeded",
+      "receipt_url": "https://pay.stripe.com/receipts/payment/CAcaFwoVYWNjdF8xU3g4UHM2aWloRWhwOVU5KLCi_MwGMgZ8lXWfJYw6LBbLP0JOc0bjjQPx1ow0SUijZNo37WLpgZ_trOGGstyGQtg6j1yrj-BEZXGR"
+    },
+    "scan_result": {
+      "plan": "paid_scan",
+      "repo_url": "https://github.com/openai/openai-quickstart-python",
+      "files_scanned": 5,
+      "ai_files": [
+        {
+          "file": "requirements.txt",
+          "frameworks": [
+            "openai"
+          ],
+          "source": "config"
+        },
+        {
+          "file": "examples/chat-basic/app.py",
+          "frameworks": [
+            "openai"
+          ]
+        },
+        {
+          "file": "examples/assistant-functions/functions.py",
+          "frameworks": [
+            "openai",
+            "anthropic"
+          ]
+        },
+        {
+          "file": "examples/assistant-flask/app.py",
+          "frameworks": [
+            "openai",
+            "anthropic"
+          ]
+        },
+        {
+          "file": "examples/assistant-basic/assistant.py",
+          "frameworks": [
+            "openai",
+            "anthropic"
+          ]
+        }
+      ],
+      "detected_models": {
+        "openai": [
+          "requirements.txt",
+          "examples/chat-basic/app.py",
+          "examples/assistant-functions/functions.py",
+          "examples/assistant-flask/app.py",
+          "examples/assistant-basic/assistant.py"
+        ],
+        "anthropic": [
+          "examples/assistant-functions/functions.py",
+          "examples/assistant-flask/app.py",
+          "examples/assistant-basic/assistant.py"
+        ]
+      },
+      "report": {
+        "report_date": "2026-02-25T15:11:44.788792+00:00",
+        "project_path": "/tmp/scan_lzqslgnl",
+        "scan_summary": {
+          "files_scanned": 5,
+          "ai_files_detected": 5,
+          "frameworks_detected": [
+            "openai",
+            "anthropic"
+          ]
+        },
+        "compliance_summary": {
+          "risk_category": "limited",
+          "compliance_score": "2/3",
+          "compliance_percentage": 66.7
+        },
+        "detailed_findings": {
+          "detected_models": {
+            "openai": [
+              "requirements.txt",
+              "examples/chat-basic/app.py",
+              "examples/assistant-functions/functions.py",
+              "examples/assistant-flask/app.py",
+              "examples/assistant-basic/assistant.py"
+            ],
+            "anthropic": [
+              "examples/assistant-functions/functions.py",
+              "examples/assistant-flask/app.py",
+              "examples/assistant-basic/assistant.py"
+            ]
+          },
+          "compliance_checks": {
+            "transparency": true,
+            "user_disclosure": true,
+            "content_marking": false
+          },
+          "requirements": [
+            "Transparency obligations",
+            "Clear user information about AI interaction",
+            "AI-generated content marking"
+          ]
+        },
+        "recommendations": [
+          {
+            "check": "transparency",
+            "status": "PASS"
+          },
+          {
+            "check": "user_disclosure",
+            "status": "PASS"
+          },
+          {
+            "check": "content_marking",
+            "status": "FAIL",
+            "what": "Mark AI-generated content so users can distinguish it from human content",
+            "why": "Art. 52(3) - AI-generated text/image/audio/video must be labeled",
+            "how": [
+              "Add metadata or visible label to AI-generated outputs",
+              "For text: prepend '[AI-generated]' or add metadata field",
+              "For images: embed C2PA metadata or visible watermark",
+              "In code: add comment '# AI-generated' or equivalent marker"
+            ],
+            "template_available": false,
+            "eu_article": "Art. 52(3)",
+            "effort": "low"
+          }
+        ]
+      }
+    }
+  },
+  "transparency": "Both agents built and controlled by ArkForge (PoC)"
+}

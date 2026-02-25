@@ -1,0 +1,54 @@
+{
+  "command": "pay",
+  "timestamp": "2026-02-25T17:13:01.704362+00:00",
+  "trust_layer": "https://arkforge.fr/trust",
+  "result": {
+    "proof": {
+      "proof_id": "prf_20260225_171300_83559a",
+      "verification_url": "https://arkforge.fr/trust/v1/proof/prf_20260225_171300_83559a",
+      "verification_algorithm": "https://arkforge.fr/trust/docs/verification",
+      "hashes": {
+        "request": "sha256:795514899c920526cc5a5fe5e8287c7516b892a755f9530bace27995e273fb35",
+        "response": "sha256:10031728bc3316197123cf7309c8aef16b4761a724dcda18986f7f4c4d093df8",
+        "chain": "sha256:13d249ac2dca05f1f2c937513f08e6e404b30dfaf8cae9bf7dfc81b36d4549e2"
+      },
+      "payment": {
+        "provider": "stripe",
+        "transaction_id": "pi_3T4ldv6iihEhp9U911ksa6Do",
+        "amount": 0.5,
+        "currency": "eur",
+        "status": "succeeded",
+        "receipt_url": "https://pay.stripe.com/receipts/payment/CAcaFwoVYWNjdF8xU3g4UHM2aWloRWhwOVU5KJzb_MwGMgamcbWcARY6LBY5c5jpbD2Q_H9SWwN5hJ8J-iXGOztbXZso_lPMURI4MFE2Sa40GIaKA_KY"
+      },
+      "timestamp": "2026-02-25T17:12:59Z",
+      "opentimestamps": {
+        "status": "pending",
+        "ots_url": "https://arkforge.fr/trust/v1/proof/prf_20260225_171300_83559a/ots"
+      }
+    },
+    "service_response": {
+      "status_code": 200,
+      "body": {
+        "proxy": {
+          "description": "Pay any HTTPS API via proxy",
+          "min_amount": 0.5,
+          "max_amount": 50.0,
+          "currencies": [
+            "eur",
+            "usd",
+            "gbp"
+          ],
+          "rate_limit": "100 calls/day per API key",
+          "fee": "0% — you pay only the amount you specify"
+        },
+        "setup": {
+          "description": "Save a card to get an API key",
+          "url": "https://arkforge.fr/trust/v1/keys/setup",
+          "cost": "Free — no charge until you use the proxy"
+        },
+        "contact": "contact@arkforge.fr"
+      }
+    }
+  },
+  "transparency": "Both agents built and controlled by ArkForge (PoC)"
+}

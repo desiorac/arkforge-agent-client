@@ -2,13 +2,17 @@
 """
 EU AI Act Compliance Agent — Autonomous Scanner & Payer
 
-Two modes:
-  pay               — Pay 0.50 EUR via /agent-pay (direct charge with saved card)
-  scan <repo_url>   — Pay 0.50 EUR + scan repo via /api/v1/paid-scan
+Routes ALL calls through ArkForge Trust Layer (certifying proxy).
+Every transaction gets a SHA-256 proof chain + optional OpenTimestamps.
+
+Modes:
+  scan <repo_url>   — Pay 0.50 EUR + scan repo via Trust Layer
+  pay               — Pay 0.50 EUR, no scan (payment proof only)
+  verify <proof_id> — Verify an existing proof
 
 Prerequisites:
     pip install requests
-    export ARKFORGE_SCAN_API_KEY="mcp_pro_..."
+    export TRUST_LAYER_API_KEY="mcp_pro_..."
 
 TRANSPARENCY NOTICE:
 Both this agent (buyer) and the ArkForge scan API (seller) are built and
@@ -24,83 +28,158 @@ from pathlib import Path
 
 import requests
 
-API_BASE = os.environ.get("ARKFORGE_API_BASE", "https://arkforge.fr")
-API_KEY = os.environ.get("ARKFORGE_SCAN_API_KEY", "").strip()
-TIMEOUT_SECONDS = 120
+TRUST_LAYER_BASE = os.environ.get("TRUST_LAYER_BASE", "https://arkforge.fr/trust")
+SCAN_API_TARGET = os.environ.get("SCAN_API_TARGET", "https://arkforge.fr/api/v1/scan-repo")
+API_KEY = os.environ.get("TRUST_LAYER_API_KEY", "").strip()
+# Fallback to old env var for backwards compat
+if not API_KEY:
+    API_KEY = os.environ.get("ARKFORGE_SCAN_API_KEY", "").strip()
+TIMEOUT_SECONDS = 130
 LOG_DIR = Path(__file__).parent / "logs"
+PROOF_DIR = Path(__file__).parent / "proofs"
+
+
+def _headers() -> dict:
+    return {
+        "X-Api-Key": API_KEY,
+        "Content-Type": "application/json",
+    }
+
+
+def _call_proxy(target: str, amount: float, payload: dict, description: str = "", method: str = "POST") -> dict:
+    """Call Trust Layer /v1/proxy — charge, forward, prove."""
+    resp = requests.post(
+        f"{TRUST_LAYER_BASE}/v1/proxy",
+        headers=_headers(),
+        json={
+            "target": target,
+            "amount": amount,
+            "currency": "eur",
+            "payload": payload,
+            "method": method,
+            "description": description,
+        },
+        timeout=TIMEOUT_SECONDS,
+    )
+
+    if resp.status_code not in (200, 201):
+        try:
+            detail = resp.json()
+        except Exception:
+            detail = resp.text
+        return {"error": f"HTTP {resp.status_code}", "detail": detail}
+
+    return resp.json()
 
 
 def pay() -> dict:
-    """Call /agent-pay to charge 0.50 EUR on saved card. No scan, payment only."""
+    """Pay 0.50 EUR through Trust Layer. No upstream call — payment proof only."""
     if not API_KEY:
-        return {"error": "ARKFORGE_SCAN_API_KEY not set. Run: export ARKFORGE_SCAN_API_KEY='mcp_pro_...'"}
+        return {"error": "TRUST_LAYER_API_KEY not set"}
 
-    resp = requests.post(
-        f"{API_BASE}/agent-pay",
-        headers={
-            "X-Api-Key": API_KEY,
-            "Content-Type": "application/json",
-        },
-        json={},
-        timeout=TIMEOUT_SECONDS,
+    # Target the pricing endpoint (lightweight, always available)
+    return _call_proxy(
+        target="https://arkforge.fr/trust/v1/pricing",
+        amount=0.50,
+        payload={},
+        description="Agent payment — proof of concept",
+        method="GET",
     )
-
-    if resp.status_code != 200:
-        try:
-            detail = resp.json().get("detail", resp.text)
-        except Exception:
-            detail = resp.text
-        return {"error": f"HTTP {resp.status_code}", "detail": detail}
-
-    return resp.json()
 
 
 def scan_repo(repo_url: str) -> dict:
-    """Call /api/v1/paid-scan to pay 0.50 EUR + scan a repository."""
+    """Pay 0.50 EUR + scan a repository for EU AI Act compliance."""
     if not API_KEY:
-        return {"error": "ARKFORGE_SCAN_API_KEY not set. Run: export ARKFORGE_SCAN_API_KEY='mcp_pro_...'"}
+        return {"error": "TRUST_LAYER_API_KEY not set"}
 
-    resp = requests.post(
-        f"{API_BASE}/api/v1/paid-scan",
-        headers={
-            "X-Api-Key": API_KEY,
-            "Content-Type": "application/json",
-        },
-        json={"repo_url": repo_url},
-        timeout=TIMEOUT_SECONDS,
+    return _call_proxy(
+        target=SCAN_API_TARGET,
+        amount=0.50,
+        payload={"repo_url": repo_url},
+        description=f"EU AI Act compliance scan: {repo_url}",
     )
 
-    if resp.status_code != 200:
-        try:
-            detail = resp.json().get("detail", resp.text)
-        except Exception:
-            detail = resp.text
-        return {"error": f"HTTP {resp.status_code}", "detail": detail}
 
+def verify_proof(proof_id: str) -> dict:
+    """Verify an existing proof via Trust Layer."""
+    resp = requests.get(
+        f"{TRUST_LAYER_BASE}/v1/proof/{proof_id}",
+        timeout=30,
+    )
+    if resp.status_code != 200:
+        return {"error": f"HTTP {resp.status_code}", "detail": resp.text[:500]}
     return resp.json()
+
+
+def _print_proof(result: dict):
+    """Print proof details from Trust Layer response."""
+    proof = result.get("proof", {})
+    if not proof:
+        return
+    hashes = proof.get("hashes", {})
+    ots = proof.get("opentimestamps", {})
+    print("[PROOF — Trust Layer]")
+    print(f"  ID:           {proof.get('proof_id', 'N/A')}")
+    print(f"  Chain Hash:   {hashes.get('chain', 'N/A')[:48]}...")
+    print(f"  Request Hash: {hashes.get('request', 'N/A')[:48]}...")
+    print(f"  Verify URL:   {proof.get('verification_url', 'N/A')}")
+    print(f"  Timestamp:    {proof.get('timestamp', 'N/A')}")
+    if ots:
+        print(f"  OTS:          {ots.get('status', 'N/A')}")
+    print()
+
+
+def _save_log(command: str, result: dict, extra: dict = None):
+    """Save transaction log and proof."""
+    now = datetime.now(timezone.utc)
+    LOG_DIR.mkdir(exist_ok=True)
+    PROOF_DIR.mkdir(exist_ok=True)
+
+    log_entry = {
+        "command": command,
+        "timestamp": now.isoformat(),
+        "trust_layer": TRUST_LAYER_BASE,
+        "result": result,
+        "transparency": "Both agents built and controlled by ArkForge (PoC)",
+    }
+    if extra:
+        log_entry.update(extra)
+
+    prefix = "scan" if command == "scan" else "pay"
+    log_file = LOG_DIR / f"{prefix}_{now.strftime('%Y%m%d_%H%M%S')}.json"
+    log_file.write_text(json.dumps(log_entry, indent=2, ensure_ascii=False))
+    (LOG_DIR / "latest_transaction.json").write_text(json.dumps(log_entry, indent=2, ensure_ascii=False))
+
+    # Save proof separately
+    proof = result.get("proof", {})
+    if proof.get("proof_id"):
+        proof_file = PROOF_DIR / f"{proof['proof_id']}.json"
+        proof_file.write_text(json.dumps(proof, indent=2, ensure_ascii=False))
+
+    print(f"[SAVED] {log_file}")
 
 
 def main():
     if len(sys.argv) < 2:
         print("Usage:")
-        print("  python3 agent.py pay                           # Pay 0.50 EUR (no scan)")
-        print("  python3 agent.py scan <repo_url>               # Pay + scan repo")
+        print("  python3 agent.py scan <repo_url>    # Pay 0.50 EUR + scan (via Trust Layer)")
+        print("  python3 agent.py pay                # Pay 0.50 EUR (proof only)")
+        print("  python3 agent.py verify <proof_id>  # Verify a proof")
         print()
         print("Setup:")
-        print("  export ARKFORGE_SCAN_API_KEY='mcp_pro_...'")
+        print("  export TRUST_LAYER_API_KEY='mcp_pro_...'")
         sys.exit(1)
 
     command = sys.argv[1]
-    now = datetime.now(timezone.utc)
-    ts = now.isoformat()
+    ts = datetime.now(timezone.utc).isoformat()
 
     if command == "pay":
         print("=" * 60)
-        print("AGENT PAYMENT — 0.50 EUR via /agent-pay")
+        print("AGENT PAYMENT — 0.50 EUR via Trust Layer")
         print("=" * 60)
-        print(f"Timestamp: {ts}")
-        print(f"Endpoint:  {API_BASE}/agent-pay")
-        print(f"API Key:   {API_KEY[:12]}..." if API_KEY else "API Key:   NOT SET")
+        print(f"Timestamp:   {ts}")
+        print(f"Trust Layer: {TRUST_LAYER_BASE}/v1/proxy")
+        print(f"API Key:     {API_KEY[:12]}..." if API_KEY else "API Key:     NOT SET")
         print()
 
         result = pay()
@@ -108,35 +187,19 @@ def main():
         if "error" in result:
             print(f"[FAILED] {result['error']}")
             if "detail" in result:
-                print(f"  {str(result['detail'])[:500]}")
+                print(f"  {json.dumps(result['detail'], indent=2)[:500]}")
             sys.exit(1)
 
-        payment = result.get("payment_proof", {})
-        print(f"[MODE]     {result.get('mode', 'unknown')}")
-        print(f"[PAYMENT]")
-        print(f"  Intent:    {payment.get('payment_intent_id', 'N/A')}")
-        print(f"  Amount:    {payment.get('amount_eur', 'N/A')} EUR")
+        payment = result.get("proof", {}).get("payment", {})
+        print("[PAYMENT]")
+        print(f"  Amount:    {payment.get('amount', 'N/A')} {payment.get('currency', 'EUR')}")
         print(f"  Status:    {payment.get('status', 'N/A')}")
+        print(f"  Stripe ID: {payment.get('transaction_id', 'N/A')}")
         print(f"  Receipt:   {payment.get('receipt_url', 'N/A')}")
-        print(f"  Customer:  {payment.get('customer_id', 'N/A')}")
-        print(f"  Timestamp: {payment.get('timestamp', 'N/A')}")
         print()
-
-        # Save log
-        LOG_DIR.mkdir(exist_ok=True)
-        log_entry = {
-            "command": "pay",
-            "timestamp": ts,
-            "endpoint": f"{API_BASE}/agent-pay",
-            "result": result,
-            "transparency": "Both agents built and controlled by ArkForge (PoC)",
-        }
-        log_file = LOG_DIR / f"pay_{now.strftime('%Y%m%d_%H%M%S')}.json"
-        log_file.write_text(json.dumps(log_entry, indent=2, ensure_ascii=False))
-        (LOG_DIR / "latest_transaction.json").write_text(json.dumps(log_entry, indent=2, ensure_ascii=False))
-        print(f"[SAVED] {log_file}")
+        _print_proof(result)
+        _save_log("pay", result)
         print("=" * 60)
-        return result
 
     elif command == "scan":
         if len(sys.argv) < 3:
@@ -146,12 +209,14 @@ def main():
         repo_url = sys.argv[2]
 
         print("=" * 60)
-        print("EU AI ACT COMPLIANCE SCAN")
+        print("EU AI ACT COMPLIANCE SCAN — via Trust Layer")
         print("=" * 60)
-        print(f"Timestamp: {ts}")
-        print(f"Target:    {repo_url}")
-        print(f"Price:     0.50 EUR")
-        print(f"API Key:   {API_KEY[:12]}..." if API_KEY else "API Key:   NOT SET")
+        print(f"Timestamp:   {ts}")
+        print(f"Target:      {repo_url}")
+        print(f"Price:       0.50 EUR")
+        print(f"Trust Layer: {TRUST_LAYER_BASE}/v1/proxy")
+        print(f"Scan API:    {SCAN_API_TARGET}")
+        print(f"API Key:     {API_KEY[:12]}..." if API_KEY else "API Key:     NOT SET")
         print()
 
         result = scan_repo(repo_url)
@@ -159,62 +224,57 @@ def main():
         if "error" in result:
             print(f"[FAILED] {result['error']}")
             if "detail" in result:
-                print(f"  {str(result['detail'])[:500]}")
+                print(f"  {json.dumps(result['detail'], indent=2)[:500]}")
             sys.exit(1)
 
-        # Payment proof
-        payment = result.get("payment_proof", {})
+        # Payment
+        payment = result.get("proof", {}).get("payment", {})
         print("[PAYMENT]")
-        print(f"  Intent:  {payment.get('payment_intent_id', 'N/A')}")
-        print(f"  Amount:  {payment.get('amount_eur', 'N/A')} EUR")
-        print(f"  Status:  {payment.get('status', 'N/A')}")
-        print(f"  Receipt: {payment.get('receipt_url', 'N/A')}")
+        print(f"  Amount:    {payment.get('amount', 'N/A')} {payment.get('currency', 'EUR')}")
+        print(f"  Status:    {payment.get('status', 'N/A')}")
+        print(f"  Stripe ID: {payment.get('transaction_id', 'N/A')}")
+        print(f"  Receipt:   {payment.get('receipt_url', 'N/A')}")
         print()
 
-        # Scan results
-        scan = result.get("scan_result", {})
-        report = scan.get("report", {})
+        # Scan results (from upstream response)
+        svc = result.get("service_response", {})
+        upstream = svc.get("body", svc)
+        scan = upstream.get("scan_result", upstream)
+        report = scan.get("report", scan)
         compliance = report.get("compliance_summary", {})
-        detected = scan.get("detected_models", {})
+        detected = scan.get("detected_models", report.get("detected_models", {}))
         frameworks = list(detected.keys()) if isinstance(detected, dict) else []
-        files_scanned = scan.get("files_scanned", 0)
-        score = compliance.get("compliance_score", "N/A")
-        pct = compliance.get("compliance_percentage", "N/A")
 
         print("[SCAN RESULT]")
+        score = compliance.get("compliance_score", "N/A")
+        pct = compliance.get("compliance_percentage", "N/A")
         print(f"  Compliance:  {score} ({pct}%)" if pct != "N/A" else f"  Compliance:  {score}")
         print(f"  Risk Cat:    {compliance.get('risk_category', 'N/A')}")
         print(f"  Frameworks:  {', '.join(frameworks) if frameworks else 'none detected'}")
-        print(f"  Files:       {files_scanned}")
         print()
 
-        # Save log
-        LOG_DIR.mkdir(exist_ok=True)
-        log_entry = {
-            "command": "scan",
-            "timestamp": ts,
-            "repo_url": repo_url,
-            "payment_proof": payment,
-            "scan_summary": {
-                "compliance_score": score,
-                "compliance_percentage": pct,
-                "risk_category": compliance.get("risk_category"),
-                "frameworks_detected": frameworks,
-                "files_scanned": files_scanned,
-            },
-            "full_result": result,
-            "transparency": "Both agents built and controlled by ArkForge (PoC)",
-        }
-        log_file = LOG_DIR / f"tx_{now.strftime('%Y%m%d_%H%M%S')}.json"
-        log_file.write_text(json.dumps(log_entry, indent=2, ensure_ascii=False))
-        (LOG_DIR / "latest_transaction.json").write_text(json.dumps(log_entry, indent=2, ensure_ascii=False))
-        print(f"[SAVED] {log_file}")
+        _print_proof(result)
+        _save_log("scan", result, {"repo_url": repo_url})
         print("=" * 60)
-        return result
+
+    elif command == "verify":
+        if len(sys.argv) < 3:
+            print("Usage: python3 agent.py verify <proof_id>")
+            sys.exit(1)
+
+        proof_id = sys.argv[2]
+        print(f"Verifying proof: {proof_id}")
+        result = verify_proof(proof_id)
+
+        if "error" in result:
+            print(f"[FAILED] {result['error']}")
+            sys.exit(1)
+
+        print(json.dumps(result, indent=2))
 
     else:
         print(f"Unknown command: {command}")
-        print("Use 'pay' or 'scan'")
+        print("Use 'scan', 'pay', or 'verify'")
         sys.exit(1)
 
 
