@@ -99,14 +99,28 @@ def main():
     # Scan results
     scan = result.get("scan_result", {})
     report = scan.get("report", {})
-    detected = scan.get("scan", {}).get("detected_models", {})
+    compliance = report.get("compliance_summary", {})
+    detected = scan.get("detected_models", {})
     frameworks = list(detected.keys()) if isinstance(detected, dict) else []
+    files_scanned = scan.get("files_scanned", 0)
+    score = compliance.get("compliance_score", "N/A")
+    pct = compliance.get("compliance_percentage", "N/A")
 
     print("[SCAN RESULT]")
-    print(f"  Risk Score:  {report.get('risk_score', scan.get('risk_score', 'N/A'))}")
+    print(f"  Compliance:  {score} ({pct}%)" if pct != "N/A" else f"  Compliance:  {score}")
+    print(f"  Risk Cat:    {compliance.get('risk_category', 'N/A')}")
     print(f"  Frameworks:  {', '.join(frameworks) if frameworks else 'none detected'}")
-    print(f"  Files:       {scan.get('scan', {}).get('files_scanned', 'N/A')}")
+    print(f"  Files:       {files_scanned}")
     print()
+
+    # Recommendations
+    recs = report.get("recommendations", [])
+    fails = [r for r in recs if r.get("status") == "FAIL"]
+    if fails:
+        print("[RECOMMENDATIONS]")
+        for r in fails:
+            print(f"  - {r['check']}: {r.get('what', '')}")
+        print()
 
     # Save transaction log locally
     LOG_DIR.mkdir(exist_ok=True)
@@ -115,10 +129,13 @@ def main():
         "repo_url": repo_url,
         "payment_proof": payment,
         "scan_summary": {
-            "risk_score": report.get("risk_score", scan.get("risk_score")),
+            "compliance_score": score,
+            "compliance_percentage": pct,
+            "risk_category": compliance.get("risk_category"),
             "frameworks_detected": frameworks,
-            "files_scanned": scan.get("scan", {}).get("files_scanned", 0),
+            "files_scanned": files_scanned,
         },
+        "full_result": result,
         "transparency": "Both agents built and controlled by ArkForge (PoC)",
     }
 
