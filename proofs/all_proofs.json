@@ -1,0 +1,33 @@
+{
+  "stripe": {
+    "status": "verified",
+    "payment_intent_id": "pi_3T4dyP6iihEhp9U90jOWPQui",
+    "charge_id": "ch_3T4dyP6iihEhp9U90ohrBjpE",
+    "amount": "0.50",
+    "currency": "eur",
+    "receipt_url": "https://pay.stripe.com/receipts/payment/CAcQARoXChVhY2N0XzFTeDhQczZpaWhFaHA5VTko3PX6zAYyBtJpDFBWVTosFmk3F2ooCCA7eDqryV-rg6QgVaIdyipO_O_4cgUhkNmCJ3aIYyMUqhoWEhM"
+  },
+  "git_commit": {
+    "status": "committed",
+    "commit_hash": "2ab42f9e1164f3320af987c690695da231da0744",
+    "repo": "agent-client"
+  },
+  "opentimestamps": {
+    "status": "stamped",
+    "sha256": "301f39c60a6a4a5f01f8058c6513a4502daa06f92a782a7fd60283161455ecdd",
+    "ots_file": "proofs/transaction_hash.txt.ots"
+  },
+  "archive_org": {
+    "status": "saved",
+    "archive_url": "https://web.archive.org/web/20260225090431/https://arkforge.fr/agent-pay"
+  },
+  "email": {
+    "status": "sent",
+    "to": "apps.desiorac@gmail.com",
+    "subject": "[PROOF] First Agent-to-Agent Transaction — 0.50 EUR"
+  },
+  "captured_at": "2026-02-25T09:04:57.099066+00:00",
+  "transaction_ref": "pi_3T4dyP6iihEhp9U90jOWPQui",
+  "verified_count": 5,
+  "total_proofs": 5
+}
