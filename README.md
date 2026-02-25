@@ -70,12 +70,13 @@ That's it. No git, no Stripe SDK, no system dependencies.
 ### 1. Register a payment card (once)
 
 ```bash
-python3 setup_card.py your@email.com
+python3 setup_card.py your@email.com --test    # Test mode (no charges)
+python3 setup_card.py your@email.com           # Live mode (real charges)
 ```
 
-Open the Checkout URL in a browser and enter a credit/debit card. No Stripe account needed — just a card. Your API key will be sent by email automatically.
+Open the Checkout URL in a browser and enter a card. No Stripe account needed — just a card. Your API key will be sent by email automatically.
 
-For testing with no real charges, use Stripe test card `4242 4242 4242 4242` (any expiry, any CVC).
+For test mode, use Stripe test card `4242 4242 4242 4242` (any future expiry, any CVC).
 
 ### 2. Run a scan
 
@@ -116,14 +117,37 @@ API Key:   mcp_pro_dcd2...
 
 ## Test mode vs Live mode
 
-Both modes work simultaneously on the same server. The API key prefix determines the Stripe mode:
+Both modes work simultaneously on the same server. No configuration needed — the API key prefix determines everything:
 
 | Key prefix | Stripe mode | Real charges? |
 |---|---|---|
 | `mcp_test_*` | Test | No |
 | `mcp_pro_*` | Live | Yes (0.50 EUR) |
 
-To get a test key, run `setup_card.py` while the server is in test mode, or ask the service operator.
+### Getting a test key (recommended first)
+
+```bash
+python3 setup_card.py your@email.com --test
+```
+
+Use Stripe test card `4242 4242 4242 4242` (any future expiry, any CVC). Your test API key (`mcp_test_...`) will be emailed automatically.
+
+### Getting a live key
+
+```bash
+python3 setup_card.py your@email.com
+```
+
+Enter a real credit/debit card. No Stripe account needed — just a card. Your live API key (`mcp_pro_...`) will be emailed automatically.
+
+### Switching between modes
+
+Just change the API key. Both keys can coexist — same email, same server:
+
+```bash
+export ARKFORGE_SCAN_API_KEY="mcp_test_..."   # Free scans (test mode)
+export ARKFORGE_SCAN_API_KEY="mcp_pro_..."    # Paid scans (0.50 EUR each)
+```
 
 ## What the scan returns
 
@@ -137,7 +161,7 @@ The paid scan runs three analyses on the target repository:
 
 ```
 arkforge-agent-client/
-  setup_card.py      # One-time: save payment method via Stripe Checkout
+  setup_card.py      # One-time: save payment method (--test for test mode)
   agent.py           # Per-scan: pay + scan + display results + log
   logs/              # Transaction logs (JSON, one per scan)
   requirements.txt   # Only: requests
@@ -156,11 +180,14 @@ The client is intentionally minimal. All complexity lives server-side:
 Save a card for future off-session payments.
 
 ```json
-// Request
+// Request (live mode)
 {"email": "user@example.com"}
 
+// Request (test mode)
+{"email": "user@example.com", "mode": "test"}
+
 // Response
-{"checkout_url": "https://checkout.stripe.com/...", "session_id": "cs_...", "customer_id": "cus_..."}
+{"checkout_url": "https://checkout.stripe.com/...", "session_id": "cs_...", "customer_id": "cus_...", "mode": "live"}
 ```
 
 ### `POST /api/v1/paid-scan`
