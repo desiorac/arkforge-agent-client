@@ -1,0 +1,46 @@
+{
+  "transaction_type": "programmatic_agent_payment",
+  "description": "First purchase by non-human intelligence — 100% programmatic, 0 human clicks",
+  "timestamp": "2026-02-25T09:25:00Z",
+  "payment": {
+    "payment_intent_id": "pi_3T4eS66iihEhp9U904R7qlGS",
+    "amount_eur": 0.50,
+    "status": "succeeded",
+    "customer": "cus_U2jlpFBPgh8L2h",
+    "payment_method": "pm_1T4eNw6iihEhp9U9mVxv4TmZ",
+    "off_session": true,
+    "metadata": {
+      "type": "agent_programmatic",
+      "initiated_by": "arkforge-agent-client",
+      "human_clicks": "0"
+    }
+  },
+  "proofs": {
+    "stripe": {
+      "status": "verified",
+      "payment_intent_id": "pi_3T4eS66iihEhp9U904R7qlGS",
+      "charge_id": "py_3T4eS66iihEhp9U90N7DKPP0"
+    },
+    "git_commit": {
+      "status": "pending",
+      "note": "this file will be committed"
+    },
+    "opentimestamps": {
+      "status": "stamped",
+      "sha256": "11c118af97b7867b72156c8e1f61b07354770cf2e3679abcc57f668edc936301",
+      "ots_file": "proofs/programmatic_hash.txt.ots"
+    },
+    "archive_org": {
+      "status": "saved",
+      "archive_url": "https://web.archive.org/web/20260225090431/https://arkforge.fr/agent-pay"
+    },
+    "email": {
+      "status": "pending"
+    }
+  },
+  "differentiation_from_manual": {
+    "manual_payment": "pi_3T4dyP6iihEhp9U90jOWPQui (human clicked browser link)",
+    "programmatic_payment": "pi_3T4eS66iihEhp9U904R7qlGS (API call, off_session=true, confirm=true)",
+    "proof": "metadata.human_clicks=0, off_session=true, no redirect URL, no browser involved"
+  }
+}

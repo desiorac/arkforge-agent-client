@@ -1,0 +1,18 @@
+{
+  "payment_intent_id": "pi_3T4eS66iihEhp9U904R7qlGS",
+  "amount": 50,
+  "currency": "eur",
+  "status": "succeeded",
+  "customer": "cus_U2jlpFBPgh8L2h",
+  "payment_method": "pm_1T4eNw6iihEhp9U9mVxv4TmZ",
+  "description": "Agent programmatic payment - first purchase by non-human intelligence",
+  "metadata": {
+    "human_clicks": "0",
+    "initiated_by": "arkforge-agent-client",
+    "type": "agent_programmatic"
+  },
+  "created": 1772011938,
+  "latest_charge": "py_3T4eS66iihEhp9U90N7DKPP0",
+  "off_session": true,
+  "human_clicks": 0
+}
