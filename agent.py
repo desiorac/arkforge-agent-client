@@ -25,7 +25,7 @@ from pathlib import Path
 import requests
 
 API_BASE = os.environ.get("ARKFORGE_API_BASE", "https://arkforge.fr")
-API_KEY = os.environ.get("ARKFORGE_SCAN_API_KEY", "")
+API_KEY = os.environ.get("ARKFORGE_SCAN_API_KEY", "").strip()
 TIMEOUT_SECONDS = 120
 LOG_DIR = Path(__file__).parent / "logs"
 
