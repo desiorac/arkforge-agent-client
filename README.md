@@ -67,13 +67,13 @@ That's it. No git, no Stripe SDK, no system dependencies.
 
 ## Quick Start
 
-### 1. Save a payment method (once)
+### 1. Register a payment card (once)
 
 ```bash
 python3 setup_card.py your@email.com
 ```
 
-Open the Checkout URL in a browser and enter a card. Your API key will be sent by email automatically.
+Open the Checkout URL in a browser and enter a credit/debit card. No Stripe account needed — just a card. Your API key will be sent by email automatically.
 
 For testing with no real charges, use Stripe test card `4242 4242 4242 4242` (any expiry, any CVC).
 
