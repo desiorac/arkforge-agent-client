@@ -46,6 +46,18 @@ Agent receives: payment receipt + scan report + cryptographic proof
 | Scan result | Re-running scan on same repo | No (deterministic) |
 | Local log | `logs/*.json` + `proofs/*.json` | Tamper-evident (contains Stripe IDs + hashes) |
 
+### Triptyque de la Preuve
+
+Every transaction carries the ArkForge mark at 3 levels:
+
+| Level | Where | For whom | What |
+|-------|-------|----------|------|
+| **1 — Digital Stamp** | `service_response.body._arkforge_attestation` | Agents (JSON consumers) | Proof ID, seal URL, verification status |
+| **2 — Ghost Stamp** | HTTP response headers | Infra / monitoring | `X-ArkForge-Proof`, `X-ArkForge-Verified`, `X-ArkForge-Proof-ID`, `X-ArkForge-Trust-Link` |
+| **3 — Visual Stamp** | HTML proof page | Humans / legal | Colored badge (green/orange/red), full proof details |
+
+Open any proof in a browser: `https://arkforge.fr/trust/v/prf_...` — the short URL redirects to a self-contained HTML page with all verification details.
+
 ## Transparency Notice
 
 Both this agent (buyer) and the ArkForge scan API (seller) are built and controlled by the same team (ArkForge). This is a proof-of-concept — not an attempt to simulate independent entities. The architecture is designed so that it **would work identically** between independent parties.
@@ -59,12 +71,22 @@ Both this agent (buyer) and the ArkForge scan API (seller) are built and control
 
 ### 1. Register a payment card (once)
 
+**Option A — via setup_card.py:**
+
 ```bash
 python3 setup_card.py your@email.com --test    # Test mode (no real charges)
 python3 setup_card.py your@email.com           # Live mode (real charges)
 ```
 
-Open the Checkout URL in a browser and enter a card. For test mode, use Stripe test card `4242 4242 4242 4242` (any future expiry, any CVC).
+**Option B — via curl:**
+
+```bash
+curl -X POST https://arkforge.fr/trust/v1/keys/setup \
+  -H "Content-Type: application/json" \
+  -d '{"email": "your@email.com", "mode": "test"}'
+```
+
+Open the returned `checkout_url` in a browser and enter a card. For test mode, use Stripe test card `4242 4242 4242 4242` (any future expiry, any CVC). Your API key will be emailed automatically.
 
 ### 2. Run a scan
 
@@ -73,7 +95,13 @@ export TRUST_LAYER_API_KEY="mcp_test_..."    # or mcp_pro_... for live
 python3 agent.py scan https://github.com/owner/repo
 ```
 
-### 3. Verify a proof
+### 3. Just pay (no scan)
+
+```bash
+python3 agent.py pay
+```
+
+### 4. Verify a proof
 
 ```bash
 python3 agent.py verify prf_20260225_171714_4ebb28
@@ -108,8 +136,18 @@ API Key:     mcp_test_93f...
   Chain Hash:   sha256:5319f160352fea2c1889cf6dcbb9d1b431...
   Request Hash: sha256:0b801bccb76376504cb2c5f92c55cd7cfd...
   Verify URL:   https://arkforge.fr/trust/v1/proof/prf_20260225_171714_4ebb28
+  Share URL:    https://arkforge.fr/trust/v/prf_20260225_171714_4ebb28
   Timestamp:    2026-02-25T17:17:12Z
   OTS:          pending
+
+[ATTESTATION — Digital Stamp]
+  Embedded in scan result body as _arkforge_attestation
+  Status:       VERIFIED_TRANSACTION
+
+[RESPONSE HEADERS — Ghost Stamp]
+  X-ArkForge-Verified: true
+  X-ArkForge-Proof-ID: prf_20260225_171714_4ebb28
+  X-ArkForge-Trust-Link: https://arkforge.fr/trust/v/prf_20260225_171714_4ebb28
 
 [SAVED] logs/scan_20260225_171715.json
 ============================================================
