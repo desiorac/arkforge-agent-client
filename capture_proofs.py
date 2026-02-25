@@ -78,7 +78,10 @@ def proof_2_git_commit(tx: dict) -> dict:
         commit_hash = hash_result.stdout.strip()
         return {"status": "committed", "commit_hash": commit_hash}
     except subprocess.CalledProcessError as e:
-        return {"status": "failed", "error": e.stderr if hasattr(e, 'stderr') else str(e)}
+        err = e.stderr if hasattr(e, 'stderr') else str(e)
+        if isinstance(err, bytes):
+            err = err.decode(errors="replace")
+        return {"status": "failed", "error": err}
     except FileNotFoundError:
         return {"status": "skipped", "error": "git binary not accessible"}
 
@@ -157,24 +160,24 @@ def proof_4_archive_org() -> dict:
 
 def proof_5_email(tx: dict, all_proofs: dict) -> dict:
     """Email all proofs to shareholder."""
-    # Load SMTP config
-    settings_env = Path("/opt/claude-ceo/config/settings.env")
+    # Load SMTP config: env vars first, then settings file, then defaults
     config = {}
-    if settings_env.exists():
-        for line in settings_env.read_text().splitlines():
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, v = line.split("=", 1)
-                config[k.strip()] = v.strip()
+    for path in [Path(__file__).parent / ".env", Path("/opt/claude-ceo/config/settings.env")]:
+        if path.exists():
+            for line in path.read_text().splitlines():
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    config.setdefault(k.strip(), v.strip())
 
-    smtp_host = config.get("SMTP_HOST", "ssl0.ovh.net")
-    smtp_port = int(config.get("SMTP_PORT", "465"))
-    smtp_user = config.get("IMAP_USER", "contact@arkforge.fr")
-    smtp_pass = config.get("IMAP_PASSWORD", "")
-    to_email = "contact@arkforge.fr"
+    smtp_host = os.environ.get("SMTP_HOST") or config.get("SMTP_HOST", "ssl0.ovh.net")
+    smtp_port = int(os.environ.get("SMTP_PORT") or config.get("SMTP_PORT", "465"))
+    smtp_user = os.environ.get("SMTP_USER") or config.get("IMAP_USER", "contact@arkforge.fr")
+    smtp_pass = os.environ.get("SMTP_PASSWORD") or config.get("IMAP_PASSWORD", "")
+    to_email = os.environ.get("PROOF_EMAIL") or "contact@arkforge.fr"
 
     if not smtp_pass:
-        return {"status": "failed", "error": "SMTP password not configured"}
+        return {"status": "skipped", "error": "SMTP not configured (set SMTP_PASSWORD env var or .env file)"}
 
     payment = tx.get("payment_proof", {})
     body = f"""PROOF OF AGENT-TO-AGENT TRANSACTION
