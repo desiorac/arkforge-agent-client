@@ -81,8 +81,8 @@ For test mode, use Stripe test card `4242 4242 4242 4242` (any future expiry, an
 ### 2. Run a scan
 
 ```bash
-export ARKFORGE_SCAN_API_KEY="mcp_pro_..."
-python3 agent.py https://github.com/owner/repo
+export ARKFORGE_SCAN_API_KEY="mcp_test_..."    # or mcp_pro_... for live
+python3 agent.py scan https://github.com/owner/repo
 ```
 
 ### Example output
@@ -91,10 +91,10 @@ python3 agent.py https://github.com/owner/repo
 ============================================================
 EU AI ACT COMPLIANCE SCAN
 ============================================================
-Timestamp: 2026-02-25T14:40:28.080618+00:00
+Timestamp: 2026-02-25T15:11:42.802488+00:00
 Target:    https://github.com/openai/openai-quickstart-python
 Price:     0.50 EUR
-API Key:   mcp_pro_dcd2...
+API Key:   mcp_test_082...
 
 [PAYMENT]
   Intent:  pi_3T4jGK6iihEhp9U91SHFGoGZ
@@ -162,7 +162,7 @@ The paid scan runs three analyses on the target repository:
 ```
 arkforge-agent-client/
   setup_card.py      # One-time: save payment method (--test for test mode)
-  agent.py           # Per-scan: pay + scan + display results + log
+  agent.py           # Two modes: "scan <url>" (pay+scan) or "pay" (payment only)
   logs/              # Transaction logs (JSON, one per scan)
   requirements.txt   # Only: requests
 ```
