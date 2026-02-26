@@ -39,10 +39,16 @@ LOG_DIR = Path(__file__).parent / "logs"
 PROOF_DIR = Path(__file__).parent / "proofs"
 
 
+AGENT_IDENTITY = "arkforge-agent-client"
+AGENT_VERSION = "1.1.0"
+
+
 def _headers() -> dict:
     return {
         "X-Api-Key": API_KEY,
         "Content-Type": "application/json",
+        "X-Agent-Identity": AGENT_IDENTITY,
+        "X-Agent-Version": AGENT_VERSION,
     }
 
 
