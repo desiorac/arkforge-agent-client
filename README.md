@@ -133,12 +133,15 @@ API Key:     mcp_test_93f...
 
 [PROOF — Trust Layer]
   ID:           prf_20260225_171714_4ebb28
+  Spec:         1.0
   Chain Hash:   sha256:5319f160352fea2c1889cf6dcbb9d1b431...
   Request Hash: sha256:0b801bccb76376504cb2c5f92c55cd7cfd...
+  Signature:    ed25519:T3hY8k...(verified)
   Verify URL:   https://arkforge.fr/trust/v1/proof/prf_20260225_171714_4ebb28
   Share URL:    https://arkforge.fr/trust/v/prf_20260225_171714_4ebb28
   Timestamp:    2026-02-25T17:17:12Z
-  OTS:          pending
+  Upstream:     Wed, 25 Feb 2026 17:17:13 GMT
+  TSA:          pending
 
 [ATTESTATION — Digital Stamp]
   Embedded in scan result body as _arkforge_attestation
@@ -152,6 +155,18 @@ API Key:     mcp_test_93f...
 [SAVED] logs/scan_20260225_171715.json
 ============================================================
 ```
+
+### New fields (additive, no client changes required)
+
+The Trust Layer now includes additional fields in proof responses. These are purely additive — no changes needed on the agent client side:
+
+| Field | Description |
+|-------|-------------|
+| `proof.spec_version` | Proof format version (`"1.0"`) |
+| `proof.arkforge_signature` | Ed25519 signature of the chain hash |
+| `proof.arkforge_pubkey` | ArkForge's public key for verification |
+| `proof.upstream_timestamp` | Upstream service's `Date` header |
+| `proof.timestamp_authority.tsr_base64` | Embedded TSR file (base64, available after background processing) |
 
 ## Commands
 
