@@ -3,7 +3,7 @@
 EU AI Act Compliance Agent — Autonomous Scanner & Payer
 
 Routes ALL calls through ArkForge Trust Layer (certifying proxy).
-Every transaction gets a SHA-256 proof chain + optional OpenTimestamps.
+Every transaction gets a SHA-256 proof chain + RFC 3161 certified timestamp.
 
 Modes:
   scan <repo_url>   — Pay 0.50 EUR + scan repo via Trust Layer
@@ -117,7 +117,7 @@ def _print_proof(result: dict):
     if not proof:
         return
     hashes = proof.get("hashes", {})
-    ots = proof.get("opentimestamps", {})
+    ots = proof.get("timestamp_authority") or proof.get("opentimestamps") or {}
     print("[PROOF — Trust Layer]")
     print(f"  ID:           {proof.get('proof_id', 'N/A')}")
     print(f"  Chain Hash:   {hashes.get('chain', 'N/A')[:48]}...")
@@ -125,7 +125,7 @@ def _print_proof(result: dict):
     print(f"  Verify URL:   {proof.get('verification_url', 'N/A')}")
     print(f"  Timestamp:    {proof.get('timestamp', 'N/A')}")
     if ots:
-        print(f"  OTS:          {ots.get('status', 'N/A')}")
+        print(f"  TSA:          {ots.get('status', 'N/A')}")
     print()
 
 

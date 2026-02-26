@@ -4,7 +4,7 @@
 
 A proof-of-concept demonstrating **autonomous agent-to-agent paid transactions** through the [ArkForge Trust Layer](https://github.com/ark-forge/trust-layer).
 
-One agent (this client) pays another agent (the [ArkForge MCP EU AI Act](https://github.com/ark-forge/mcp-eu-ai-act) scanner) to scan a code repository for EU AI Act compliance. Every transaction flows through the Trust Layer, which handles billing via Stripe and produces a tamper-proof cryptographic proof (SHA-256 chain + OpenTimestamps).
+One agent (this client) pays another agent (the [ArkForge MCP EU AI Act](https://github.com/ark-forge/mcp-eu-ai-act) scanner) to scan a code repository for EU AI Act compliance. Every transaction flows through the Trust Layer, which handles billing via Stripe and produces a tamper-proof cryptographic proof (SHA-256 chain + RFC 3161 certified timestamp).
 
 No human clicks, no browser, no manual approval.
 
@@ -29,7 +29,7 @@ Trust Layer (/v1/proxy)
     |--- Charges 0.50 EUR via Stripe (off-session)
     |--- Forwards scan request to upstream API
     |--- Hashes request + response (SHA-256 chain)
-    |--- Submits to OpenTimestamps (Bitcoin anchor)
+    |--- Submits to RFC 3161 TSA (certified timestamp)
     |--- Returns proof + scan result
     |
     v
@@ -42,7 +42,7 @@ Agent receives: payment receipt + scan report + cryptographic proof
 |---|---|---|
 | Stripe Payment Intent | Stripe dashboard, receipt URL | No (Stripe is source of truth) |
 | SHA-256 hash chain | Trust Layer verification URL | No (deterministic) |
-| OpenTimestamps | Any Bitcoin node | No (anchored on blockchain) |
+| RFC 3161 TSA | `openssl ts -verify` | No (certified by trusted TSA) |
 | Scan result | Re-running scan on same repo | No (deterministic) |
 | Local log | `logs/*.json` + `proofs/*.json` | Tamper-evident (contains Stripe IDs + hashes) |
 
