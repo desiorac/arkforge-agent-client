@@ -117,7 +117,7 @@ def _print_proof(result: dict):
     if not proof:
         return
     hashes = proof.get("hashes", {})
-    ots = proof.get("timestamp_authority") or proof.get("opentimestamps") or {}
+    ots = proof.get("timestamp_authority") or {}
     print("[PROOF — Trust Layer]")
     print(f"  ID:           {proof.get('proof_id', 'N/A')}")
     print(f"  Chain Hash:   {hashes.get('chain', 'N/A')[:48]}...")
