@@ -1,0 +1,30 @@
+{
+  "proof_id": "prf_20260225_210632_d5843c",
+  "verification_url": "https://arkforge.fr/trust/v1/proof/prf_20260225_210632_d5843c",
+  "verification_algorithm": "https://arkforge.fr/trust/docs/verification",
+  "hashes": {
+    "request": "sha256:748fd4d9e101f342f61163f317ba0a045297b41618dd47f91436e22fecdc23cf",
+    "response": "sha256:9027c3a35c8178e089dc9476a66de5b35d6ace779c1e293bd14e1f5b75282f93",
+    "chain": "sha256:ba18d192e29f38a8a237c2ce4852b6925aa84ac412c2c047dbd644f1e72ea133"
+  },
+  "parties": {
+    "buyer_fingerprint": "ce4e8d5316904214c8b9249b28370eaafdd102dca443b1a4c91203abbe964c8e",
+    "seller": "arkforge.fr",
+    "agent_identity": null,
+    "agent_version": null
+  },
+  "payment": {
+    "provider": "stripe",
+    "transaction_id": "pi_3T4pHm6iihEhp9U91xpaY5tS",
+    "amount": 0.5,
+    "currency": "eur",
+    "status": "succeeded",
+    "receipt_url": "https://pay.stripe.com/receipts/payment/CAcQARoXChVhY2N0XzFTeDhQczZpaWhFaHA5VTko0cj9zAYyBtVDtIMT5TosFlkL4cKIwPMkpHxc7nAHSeBqPDGNYeAIffbbOGTofK6O7ybFACWBTSQ8pXo"
+  },
+  "timestamp": "2026-02-25T21:06:21Z",
+  "opentimestamps": {
+    "status": "pending",
+    "ots_url": "https://arkforge.fr/trust/v1/proof/prf_20260225_210632_d5843c/ots"
+  },
+  "identity_consistent": null
+}

@@ -1,0 +1,31 @@
+{
+  "proof_id": "prf_20260226_171529_3539a5",
+  "verification_url": "https://arkforge.fr/trust/v1/proof/prf_20260226_171529_3539a5",
+  "verification_algorithm": "https://github.com/ark-forge/proof-spec/blob/main/SPEC.md#2-chain-hash-algorithm",
+  "hashes": {
+    "request": "sha256:0b801bccb76376504cb2c5f92c55cd7cfd2a6148ba15270cc6257f49585735c0",
+    "response": "sha256:d664864653cf8d5397564914a5067cd62e0de78732c92d57615ee37ff80f7f62",
+    "chain": "sha256:74ae5749f9ca2c9803393f1b8f7815b4bd15ded9b9f531359e4e96587b2099f9"
+  },
+  "parties": {
+    "buyer_fingerprint": "833ffc8249c4283c9a4fc3b12733a064237a42df124727efcb0c88cc3d18dbd0",
+    "seller": "arkforge.fr",
+    "agent_identity": null,
+    "agent_version": null
+  },
+  "payment": {
+    "provider": "stripe",
+    "transaction_id": "pi_3T589s6iihEhp9U90MAMOCHF",
+    "amount": 0.5,
+    "currency": "eur",
+    "status": "succeeded",
+    "receipt_url": "https://pay.stripe.com/receipts/payment/CAcaFwoVYWNjdF8xU3g4UHM2aWloRWhwOVU5KLD_gc0GMgaRLI_wXmI6LBb0ojLMPcrYOAfvIrj4LMxT_iaIoN3ON34J11HTL7bq9-YP92zD6HOXGe13"
+  },
+  "timestamp": "2026-02-26T17:15:27Z",
+  "timestamp_authority": {
+    "status": "submitted",
+    "provider": "freetsa.org",
+    "tsr_url": "https://arkforge.fr/trust/v1/proof/prf_20260226_171529_3539a5/tsr"
+  },
+  "identity_consistent": null
+}

@@ -1,0 +1,338 @@
+{
+  "command": "scan",
+  "timestamp": "2026-02-25T21:06:33.249864+00:00",
+  "trust_layer": "https://arkforge.fr/trust",
+  "result": {
+    "proof": {
+      "proof_id": "prf_20260225_210632_d5843c",
+      "verification_url": "https://arkforge.fr/trust/v1/proof/prf_20260225_210632_d5843c",
+      "verification_algorithm": "https://arkforge.fr/trust/docs/verification",
+      "hashes": {
+        "request": "sha256:748fd4d9e101f342f61163f317ba0a045297b41618dd47f91436e22fecdc23cf",
+        "response": "sha256:9027c3a35c8178e089dc9476a66de5b35d6ace779c1e293bd14e1f5b75282f93",
+        "chain": "sha256:ba18d192e29f38a8a237c2ce4852b6925aa84ac412c2c047dbd644f1e72ea133"
+      },
+      "parties": {
+        "buyer_fingerprint": "ce4e8d5316904214c8b9249b28370eaafdd102dca443b1a4c91203abbe964c8e",
+        "seller": "arkforge.fr",
+        "agent_identity": null,
+        "agent_version": null
+      },
+      "payment": {
+        "provider": "stripe",
+        "transaction_id": "pi_3T4pHm6iihEhp9U91xpaY5tS",
+        "amount": 0.5,
+        "currency": "eur",
+        "status": "succeeded",
+        "receipt_url": "https://pay.stripe.com/receipts/payment/CAcQARoXChVhY2N0XzFTeDhQczZpaWhFaHA5VTko0cj9zAYyBtVDtIMT5TosFlkL4cKIwPMkpHxc7nAHSeBqPDGNYeAIffbbOGTofK6O7ybFACWBTSQ8pXo"
+      },
+      "timestamp": "2026-02-25T21:06:21Z",
+      "opentimestamps": {
+        "status": "pending",
+        "ots_url": "https://arkforge.fr/trust/v1/proof/prf_20260225_210632_d5843c/ots"
+      },
+      "identity_consistent": null
+    },
+    "service_response": {
+      "status_code": 200,
+      "body": {
+        "scan_result": {
+          "plan": "trust_layer",
+          "repo_url": "https://github.com/anthropics/anthropic-cookbook",
+          "files_scanned": 87,
+          "ai_files": [
+            {
+              "file": "pyproject.toml",
+              "frameworks": [
+                "anthropic"
+              ],
+              "source": "config"
+            },
+            {
+              "file": "tool_use/requirements.txt",
+              "frameworks": [
+                "anthropic"
+              ],
+              "source": "config"
+            },
+            {
+              "file": "skills/skill_utils.py",
+              "frameworks": [
+                "anthropic"
+              ]
+            },
+            {
+              "file": "skills/requirements.txt",
+              "frameworks": [
+                "anthropic"
+              ],
+              "source": "config"
+            },
+            {
+              "file": "skills/file_utils.py",
+              "frameworks": [
+                "anthropic"
+              ]
+            },
+            {
+              "file": "scripts/validate_all_notebooks.py",
+              "frameworks": [
+                "anthropic"
+              ]
+            },
+            {
+              "file": ".claude/skills/cookbook-audit/validate_notebook.py",
+              "frameworks": [
+                "anthropic"
+              ]
+            },
+            {
+              "file": "capabilities/contextual-embeddings/contextual-rag-lambda-function/lambda_function.py",
+              "frameworks": [
+                "aws_bedrock"
+              ]
+            },
+            {
+              "file": "capabilities/contextual-embeddings/contextual-rag-lambda-function/inference_adapter.py",
+              "frameworks": [
+                "aws_bedrock",
+                "anthropic"
+              ]
+            },
+            {
+              "file": "capabilities/retrieval_augmented_generation/evaluation/provider_retrieval.py",
+              "frameworks": [
+                "anthropic"
+              ]
+            },
+            {
+              "file": "capabilities/retrieval_augmented_generation/evaluation/prompts.py",
+              "frameworks": [
+                "anthropic"
+              ]
+            },
+            {
+              "file": "capabilities/retrieval_augmented_generation/evaluation/eval_end_to_end.py",
+              "frameworks": [
+                "anthropic"
+              ]
+            },
+            {
+              "file": "capabilities/summarization/evaluation/custom_evals/llm_eval.py",
+              "frameworks": [
+                "anthropic"
+              ]
+            },
+            {
+              "file": "claude_agent_sdk/research_agent/agent.py",
+              "frameworks": [
+                "anthropic"
+              ]
+            },
+            {
+              "file": "claude_agent_sdk/observability_agent/agent.py",
+              "frameworks": [
+                "anthropic"
+              ]
+            },
+            {
+              "file": "claude_agent_sdk/chief_of_staff_agent/agent.py",
+              "frameworks": [
+                "anthropic"
+              ]
+            },
+            {
+              "file": "claude_agent_sdk/site_reliability_agent/examples/sre_bot_slack.py",
+              "frameworks": [
+                "anthropic"
+              ]
+            },
+            {
+              "file": "patterns/agents/util.py",
+              "frameworks": [
+                "anthropic"
+              ]
+            },
+            {
+              "file": "tests/notebook_tests/utils.py",
+              "frameworks": [
+                "anthropic"
+              ]
+            },
+            {
+              "file": "tests/notebook_tests/test_notebooks.py",
+              "frameworks": [
+                "anthropic"
+              ]
+            },
+            {
+              "file": "third_party/ElevenLabs/stream_voice_assistant_websocket.py",
+              "frameworks": [
+                "anthropic"
+              ]
+            },
+            {
+              "file": "third_party/ElevenLabs/requirements.txt",
+              "frameworks": [
+                "anthropic"
+              ],
+              "source": "config"
+            },
+            {
+              "file": "tool_use/utils/visualize.py",
+              "frameworks": [
+                "anthropic"
+              ]
+            },
+            {
+              "file": "tool_use/utils/customer_service_tools.py",
+              "frameworks": [
+                "anthropic"
+              ]
+            },
+            {
+              "file": "tool_use/memory_demo/demo_helpers.py",
+              "frameworks": [
+                "anthropic"
+              ]
+            },
+            {
+              "file": "tool_use/memory_demo/code_review_demo.py",
+              "frameworks": [
+                "anthropic"
+              ]
+            }
+          ],
+          "detected_models": {
+            "anthropic": [
+              "pyproject.toml",
+              "tool_use/requirements.txt",
+              "skills/skill_utils.py",
+              "skills/requirements.txt",
+              "skills/file_utils.py",
+              "scripts/validate_all_notebooks.py",
+              ".claude/skills/cookbook-audit/validate_notebook.py",
+              "capabilities/contextual-embeddings/contextual-rag-lambda-function/inference_adapter.py",
+              "capabilities/retrieval_augmented_generation/evaluation/provider_retrieval.py",
+              "capabilities/retrieval_augmented_generation/evaluation/prompts.py",
+              "capabilities/retrieval_augmented_generation/evaluation/eval_end_to_end.py",
+              "capabilities/summarization/evaluation/custom_evals/llm_eval.py",
+              "claude_agent_sdk/research_agent/agent.py",
+              "claude_agent_sdk/observability_agent/agent.py",
+              "claude_agent_sdk/chief_of_staff_agent/agent.py",
+              "claude_agent_sdk/site_reliability_agent/examples/sre_bot_slack.py",
+              "patterns/agents/util.py",
+              "tests/notebook_tests/utils.py",
+              "tests/notebook_tests/test_notebooks.py",
+              "third_party/ElevenLabs/stream_voice_assistant_websocket.py",
+              "third_party/ElevenLabs/requirements.txt",
+              "tool_use/utils/visualize.py",
+              "tool_use/utils/customer_service_tools.py",
+              "tool_use/memory_demo/demo_helpers.py",
+              "tool_use/memory_demo/code_review_demo.py"
+            ],
+            "aws_bedrock": [
+              "capabilities/contextual-embeddings/contextual-rag-lambda-function/lambda_function.py",
+              "capabilities/contextual-embeddings/contextual-rag-lambda-function/inference_adapter.py"
+            ]
+          },
+          "report": {
+            "report_date": "2026-02-25T21:06:31.996619+00:00",
+            "project_path": "/tmp/scan_om5an2gx",
+            "scan_summary": {
+              "files_scanned": 87,
+              "ai_files_detected": 26,
+              "frameworks_detected": [
+                "anthropic",
+                "aws_bedrock"
+              ]
+            },
+            "compliance_summary": {
+              "risk_category": "limited",
+              "compliance_score": "2/3",
+              "compliance_percentage": 66.7
+            },
+            "detailed_findings": {
+              "detected_models": {
+                "anthropic": [
+                  "pyproject.toml",
+                  "tool_use/requirements.txt",
+                  "skills/skill_utils.py",
+                  "skills/requirements.txt",
+                  "skills/file_utils.py",
+                  "scripts/validate_all_notebooks.py",
+                  ".claude/skills/cookbook-audit/validate_notebook.py",
+                  "capabilities/contextual-embeddings/contextual-rag-lambda-function/inference_adapter.py",
+                  "capabilities/retrieval_augmented_generation/evaluation/provider_retrieval.py",
+                  "capabilities/retrieval_augmented_generation/evaluation/prompts.py",
+                  "capabilities/retrieval_augmented_generation/evaluation/eval_end_to_end.py",
+                  "capabilities/summarization/evaluation/custom_evals/llm_eval.py",
+                  "claude_agent_sdk/research_agent/agent.py",
+                  "claude_agent_sdk/observability_agent/agent.py",
+                  "claude_agent_sdk/chief_of_staff_agent/agent.py",
+                  "claude_agent_sdk/site_reliability_agent/examples/sre_bot_slack.py",
+                  "patterns/agents/util.py",
+                  "tests/notebook_tests/utils.py",
+                  "tests/notebook_tests/test_notebooks.py",
+                  "third_party/ElevenLabs/stream_voice_assistant_websocket.py",
+                  "third_party/ElevenLabs/requirements.txt",
+                  "tool_use/utils/visualize.py",
+                  "tool_use/utils/customer_service_tools.py",
+                  "tool_use/memory_demo/demo_helpers.py",
+                  "tool_use/memory_demo/code_review_demo.py"
+                ],
+                "aws_bedrock": [
+                  "capabilities/contextual-embeddings/contextual-rag-lambda-function/lambda_function.py",
+                  "capabilities/contextual-embeddings/contextual-rag-lambda-function/inference_adapter.py"
+                ]
+              },
+              "compliance_checks": {
+                "transparency": true,
+                "user_disclosure": true,
+                "content_marking": false
+              },
+              "requirements": [
+                "Transparency obligations",
+                "Clear user information about AI interaction",
+                "AI-generated content marking"
+              ]
+            },
+            "recommendations": [
+              {
+                "check": "transparency",
+                "status": "PASS"
+              },
+              {
+                "check": "user_disclosure",
+                "status": "PASS"
+              },
+              {
+                "check": "content_marking",
+                "status": "FAIL",
+                "what": "Mark AI-generated content so users can distinguish it from human content",
+                "why": "Art. 52(3) - AI-generated text/image/audio/video must be labeled",
+                "how": [
+                  "Add metadata or visible label to AI-generated outputs",
+                  "For text: prepend '[AI-generated]' or add metadata field",
+                  "For images: embed C2PA metadata or visible watermark",
+                  "In code: add comment '# AI-generated' or equivalent marker"
+                ],
+                "template_available": false,
+                "eu_article": "Art. 52(3)",
+                "effort": "low"
+              }
+            ]
+          }
+        },
+        "_arkforge_attestation": {
+          "id": "prf_20260225_210632_d5843c",
+          "seal": "https://arkforge.fr/trust/v1/proof/prf_20260225_210632_d5843c",
+          "status": "VERIFIED_TRANSACTION",
+          "msg": "Payment confirmed, execution anchored."
+        }
+      }
+    }
+  },
+  "transparency": "Both agents built and controlled by ArkForge (PoC)",
+  "repo_url": "https://github.com/anthropics/anthropic-cookbook"
+}
