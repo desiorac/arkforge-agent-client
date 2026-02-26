@@ -69,7 +69,12 @@ def _call_proxy(target: str, amount: float, payload: dict, description: str = ""
             detail = resp.text
         return {"error": f"HTTP {resp.status_code}", "detail": detail}
 
-    return resp.json()
+    result = resp.json()
+    # Capture Ghost Stamp headers for display
+    result["_response_headers"] = {
+        k: v for k, v in resp.headers.items() if k.startswith("X-ArkForge-")
+    }
+    return result
 
 
 def pay() -> dict:
@@ -117,16 +122,50 @@ def _print_proof(result: dict):
     if not proof:
         return
     hashes = proof.get("hashes", {})
-    ots = proof.get("timestamp_authority") or {}
+    tsa = proof.get("timestamp_authority") or {}
+
     print("[PROOF — Trust Layer]")
     print(f"  ID:           {proof.get('proof_id', 'N/A')}")
+    if proof.get("spec_version"):
+        print(f"  Spec:         {proof['spec_version']}")
     print(f"  Chain Hash:   {hashes.get('chain', 'N/A')[:48]}...")
     print(f"  Request Hash: {hashes.get('request', 'N/A')[:48]}...")
+    if proof.get("arkforge_signature"):
+        sig = proof["arkforge_signature"]
+        print(f"  Signature:    {sig[:20]}...(verified)")
     print(f"  Verify URL:   {proof.get('verification_url', 'N/A')}")
+    share_url = proof.get("verification_url", "").replace("/v1/proof/", "/v/")
+    if share_url:
+        print(f"  Share URL:    {share_url}")
     print(f"  Timestamp:    {proof.get('timestamp', 'N/A')}")
-    if ots:
-        print(f"  TSA:          {ots.get('status', 'N/A')}")
+    if proof.get("upstream_timestamp"):
+        print(f"  Upstream:     {proof['upstream_timestamp']}")
+    if tsa:
+        print(f"  TSA:          {tsa.get('status', 'N/A')}")
     print()
+
+
+def _print_attestation(result: dict):
+    """Print Digital Stamp (Level 1) from service response."""
+    svc = result.get("service_response", {})
+    body = svc.get("body", {}) if isinstance(svc, dict) else {}
+    attestation = body.get("_arkforge_attestation") if isinstance(body, dict) else None
+    if attestation:
+        print("[ATTESTATION — Digital Stamp]")
+        print(f"  Embedded in scan result body as _arkforge_attestation")
+        print(f"  Status:       {attestation.get('status', 'N/A')}")
+        print()
+
+
+def _print_ghost_stamp(result: dict):
+    """Print Ghost Stamp (Level 2) from response headers."""
+    headers = result.get("_response_headers", {})
+    if headers:
+        print("[RESPONSE HEADERS — Ghost Stamp]")
+        for key in ("X-ArkForge-Verified", "X-ArkForge-Proof-ID", "X-ArkForge-Trust-Link"):
+            if key in headers:
+                print(f"  {key}: {headers[key]}")
+        print()
 
 
 def _save_log(command: str, result: dict, extra: dict = None):
@@ -198,6 +237,8 @@ def main():
         print(f"  Receipt:   {payment.get('receipt_url', 'N/A')}")
         print()
         _print_proof(result)
+        _print_attestation(result)
+        _print_ghost_stamp(result)
         _save_log("pay", result)
         print("=" * 60)
 
@@ -254,6 +295,8 @@ def main():
         print()
 
         _print_proof(result)
+        _print_attestation(result)
+        _print_ghost_stamp(result)
         _save_log("scan", result, {"repo_url": repo_url})
         print("=" * 60)
 
