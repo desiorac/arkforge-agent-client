@@ -217,6 +217,10 @@ arkforge-agent-client/
   requirements.txt   # Only: requests
 ```
 
+## Roadmap
+
+Third-party provider support and multi-PSP payment verification are coming. See the [Trust Layer roadmap](https://github.com/ark-forge/trust-layer/blob/main/ROADMAP.md).
+
 ## License
 
 MIT
