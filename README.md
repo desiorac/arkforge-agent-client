@@ -176,7 +176,7 @@ The Trust Layer now includes additional fields in proof responses. These are pur
 
 | Field | Description |
 |-------|-------------|
-| `proof.spec_version` | Proof format version (`"1.1"`) |
+| `proof.spec_version` | Proof format version (see [proof-spec](https://github.com/ark-forge/proof-spec)) |
 | `proof.arkforge_signature` | Ed25519 signature of the chain hash |
 | `proof.arkforge_pubkey` | ArkForge's public key for verification |
 | `proof.upstream_timestamp` | Upstream service's `Date` header |
