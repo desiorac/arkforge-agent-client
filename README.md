@@ -4,7 +4,7 @@
 
 A proof-of-concept demonstrating **autonomous agent-to-agent paid transactions** through the [ArkForge Trust Layer](https://github.com/ark-forge/trust-layer).
 
-One agent (this client) pays another agent (the [ArkForge MCP EU AI Act](https://github.com/ark-forge/mcp-eu-ai-act) scanner) to scan a code repository for EU AI Act compliance. Every transaction flows through the Trust Layer, which handles billing via Stripe and produces a tamper-proof cryptographic proof (SHA-256 chain + RFC 3161 certified timestamp).
+One agent (this client) calls another agent (the [ArkForge MCP EU AI Act](https://github.com/ark-forge/mcp-eu-ai-act) scanner) to scan a code repository for EU AI Act compliance. Every transaction flows through the Trust Layer, which produces a tamper-proof cryptographic proof (SHA-256 chain + Ed25519 signature + RFC 3161 certified timestamp). Pro plan adds Stripe payment as a 4th witness.
 
 No human clicks, no browser, no manual approval.
 
@@ -26,25 +26,27 @@ Agent Client
     v
 Trust Layer (/v1/proxy)
     |--- Validates API key
-    |--- Charges 0.50 EUR via Stripe (off-session)
+    |--- Charges via Stripe (Pro only — Free skips this)
     |--- Forwards scan request to upstream API
     |--- Hashes request + response (SHA-256 chain)
+    |--- Signs with Ed25519
     |--- Submits to RFC 3161 TSA (certified timestamp)
     |--- Returns proof + scan result
     |
     v
-Agent receives: payment receipt + scan report + cryptographic proof
+Agent receives: scan report + cryptographic proof (+ payment receipt on Pro)
 ```
 
 **Each layer is independently verifiable:**
 
-| Proof | Verified by | Can be faked? |
-|---|---|---|
-| Stripe Payment Intent | Stripe dashboard, receipt URL | No (Stripe is source of truth) |
-| SHA-256 hash chain | Trust Layer verification URL | No (deterministic) |
-| RFC 3161 TSA | `openssl ts -verify` | No (certified by trusted TSA) |
-| Scan result | Re-running scan on same repo | No (deterministic) |
-| Local log | `logs/*.json` + `proofs/*.json` | Tamper-evident (contains Stripe IDs + hashes) |
+| Proof | Verified by | Can be faked? | Plan |
+|---|---|---|---|
+| Ed25519 signature | Verify with ArkForge public key | No (cryptographic) | All |
+| SHA-256 hash chain | Trust Layer verification URL | No (deterministic) | All |
+| RFC 3161 TSA | `openssl ts -verify` | No (certified by trusted TSA) | All |
+| Stripe Payment Intent | Stripe dashboard, receipt URL | No (Stripe is source of truth) | Pro only |
+| Scan result | Re-running scan on same repo | No (deterministic) | All |
+| Local log | `logs/*.json` + `proofs/*.json` | Tamper-evident (contains hashes) | All |
 
 ### Triptyque de la Preuve
 
@@ -69,7 +71,19 @@ Both this agent (buyer) and the ArkForge scan API (seller) are built and control
 
 ## Quick Start
 
-### 1. Register a payment card (once)
+### 1. Get an API key
+
+**Free plan** — no card required:
+
+```bash
+curl -X POST https://arkforge.fr/trust/v1/keys/setup \
+  -H "Content-Type: application/json" \
+  -d '{"email": "your@email.com", "plan": "free"}'
+```
+
+Your `mcp_free_*` API key will be emailed automatically. 100 calls/month, 3 witnesses (no Stripe).
+
+**Pro plan** — register a payment card (once):
 
 **Option A — via setup_card.py:**
 
@@ -172,16 +186,17 @@ The Trust Layer now includes additional fields in proof responses. These are pur
 
 | Command | Description |
 |---------|-------------|
-| `python3 agent.py scan <repo_url>` | Pay 0.50 EUR + scan repo via Trust Layer |
-| `python3 agent.py pay` | Pay 0.50 EUR (proof only, no scan) |
+| `python3 agent.py scan <repo_url>` | Scan repo via Trust Layer (0.50 EUR on Pro, free on Free) |
+| `python3 agent.py pay` | Payment + proof only, no scan (Pro keys only) |
 | `python3 agent.py verify <proof_id>` | Verify an existing proof |
 
-## Test mode vs Live mode
+## Plans
 
-| Key prefix | Stripe mode | Real charges? |
-|---|---|---|
-| `mcp_test_*` | Test | No |
-| `mcp_pro_*` | Live | Yes (0.50 EUR) |
+| Key prefix | Plan | Stripe | Witnesses | Limits |
+|---|---|---|---|---|
+| `mcp_free_*` | Free | No | 3 (Ed25519, TSA, Archive.org) | 100/month |
+| `mcp_test_*` | Test | Test mode (no real charges) | 4 | Unlimited |
+| `mcp_pro_*` | Pro | Live (0.50 EUR/call) | 4 (+ Stripe receipt) | 100/day |
 
 ## Environment variables
 
