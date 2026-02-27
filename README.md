@@ -8,6 +8,14 @@ One agent (this client) calls another agent (the [ArkForge MCP EU AI Act](https:
 
 No human clicks, no browser, no manual approval.
 
+## Quick usage
+
+```bash
+pip install requests
+export TRUST_LAYER_API_KEY="mcp_free_xxxx..."   # get one at https://arkforge.fr/en/signup.html
+python3 agent.py scan https://github.com/owner/repo
+```
+
 ## Why does this matter?
 
 AI agents are starting to act on behalf of humans — browsing, coding, deploying. The next step is agents **paying for services autonomously**. But autonomous payments create a trust problem:
