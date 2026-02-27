@@ -4,7 +4,7 @@
 
 A proof-of-concept demonstrating **autonomous agent-to-agent paid transactions** through the [ArkForge Trust Layer](https://github.com/ark-forge/trust-layer).
 
-One agent (this client) calls another agent (the [ArkForge MCP EU AI Act](https://github.com/ark-forge/mcp-eu-ai-act) scanner) to scan a code repository for EU AI Act compliance. Every transaction flows through the Trust Layer, which produces a tamper-proof cryptographic proof (SHA-256 chain + Ed25519 signature + RFC 3161 certified timestamp). Pro plan adds Stripe payment as a 4th witness.
+One agent (this client) calls another agent (the [ArkForge MCP EU AI Act](https://github.com/ark-forge/mcp-eu-ai-act) scanner) to scan a code repository for EU AI Act compliance. Every transaction flows through the Trust Layer, which produces a tamper-proof cryptographic proof (SHA-256 chain + Ed25519 signature + RFC 3161 certified timestamp). Pro plan uses prepaid credits (0.10 EUR/proof) with Stripe payment as a witness.
 
 No human clicks, no browser, no manual approval.
 
@@ -26,7 +26,7 @@ Agent Client
     v
 Trust Layer (/v1/proxy)
     |--- Validates API key
-    |--- Charges via Stripe (Pro only — Free skips this)
+    |--- Debits prepaid credits (Pro only — Free skips this)
     |--- Forwards scan request to upstream API
     |--- Hashes request + response (SHA-256 chain)
     |--- Signs with Ed25519
@@ -34,7 +34,7 @@ Trust Layer (/v1/proxy)
     |--- Returns proof + scan result
     |
     v
-Agent receives: scan report + cryptographic proof (+ payment receipt on Pro)
+Agent receives: scan report + cryptographic proof
 ```
 
 **Each layer is independently verifiable:**
@@ -44,7 +44,7 @@ Agent receives: scan report + cryptographic proof (+ payment receipt on Pro)
 | Ed25519 signature | Verify with ArkForge public key | No (cryptographic) | All |
 | SHA-256 hash chain | Trust Layer verification URL | No (deterministic) | All |
 | RFC 3161 TSA | `openssl ts -verify` | No (certified by trusted TSA) | All |
-| Stripe Payment Intent | Stripe dashboard, receipt URL | No (Stripe is source of truth) | Pro only |
+| Stripe receipt | Stripe dashboard (for credit purchase) | No (Stripe is source of truth) | Pro only |
 | Scan result | Re-running scan on same repo | No (deterministic) | All |
 | Local log | `logs/*.json` + `proofs/*.json` | Tamper-evident (contains hashes) | All |
 
@@ -102,20 +102,42 @@ curl -X POST https://arkforge.fr/trust/v1/keys/setup \
 
 Open the returned `checkout_url` in a browser and enter a card. For test mode, use Stripe test card `4242 4242 4242 4242` (any future expiry, any CVC). Your API key will be emailed automatically.
 
-### 2. Run a scan
+### 2. Buy credits (Pro plan)
+
+Before using the proxy, purchase prepaid credits:
+
+**Via agent.py:**
+
+```bash
+export TRUST_LAYER_API_KEY="mcp_pro_..."
+python3 agent.py credits 10    # Buy 10 EUR = 100 proofs
+```
+
+**Via curl:**
+
+```bash
+curl -X POST https://arkforge.fr/trust/v1/credits/buy \
+  -H "Content-Type: application/json" \
+  -H "X-Api-Key: mcp_pro_..." \
+  -d '{"amount": 10}'
+```
+
+Each proof costs 0.10 EUR. Min 1 EUR, max 100 EUR. Credits are deducted automatically on each proxy call.
+
+### 3. Run a scan
 
 ```bash
 export TRUST_LAYER_API_KEY="mcp_test_..."    # or mcp_pro_... for live
 python3 agent.py scan https://github.com/owner/repo
 ```
 
-### 3. Just pay (no scan)
+### 4. Just pay (no scan)
 
 ```bash
 python3 agent.py pay
 ```
 
-### 4. Verify a proof
+### 5. Verify a proof
 
 ```bash
 python3 agent.py verify prf_20260225_171714_4ebb28
@@ -129,16 +151,15 @@ EU AI ACT COMPLIANCE SCAN — via Trust Layer
 ============================================================
 Timestamp:   2026-02-25T17:17:12.560154+00:00
 Target:      https://github.com/openai/openai-quickstart-python
-Price:       0.50 EUR
+Price:       0.10 EUR (from prepaid credits)
 Trust Layer: https://arkforge.fr/trust/v1/proxy
 Scan API:    https://arkforge.fr/api/v1/scan-repo
 API Key:     mcp_test_93f...
 
 [PAYMENT]
-  Amount:    0.5 eur
+  Amount:    0.1 eur
   Status:    succeeded
-  Stripe ID: pi_3T4li16iihEhp9U90qMPez14
-  Receipt:   https://pay.stripe.com/receipts/payment/CAcaFwo...
+  Txn ID:    crd_20260227_143012_a1b2c3
 
 [SCAN RESULT]
   Compliance:  2/3 (66.7%)
@@ -186,8 +207,9 @@ The Trust Layer now includes additional fields in proof responses. These are pur
 
 | Command | Description |
 |---------|-------------|
-| `python3 agent.py scan <repo_url>` | Scan repo via Trust Layer (0.50 EUR on Pro, free on Free) |
-| `python3 agent.py pay` | Payment + proof only, no scan (Pro keys only) |
+| `python3 agent.py scan <repo_url>` | Scan repo via Trust Layer (0.10 EUR from credits on Pro, free on Free) |
+| `python3 agent.py pay` | Payment + proof only, no scan (0.10 EUR from credits) |
+| `python3 agent.py credits <amount>` | Buy prepaid credits (min 1 EUR, max 100 EUR) |
 | `python3 agent.py verify <proof_id>` | Verify an existing proof |
 
 ## Plans
@@ -195,8 +217,8 @@ The Trust Layer now includes additional fields in proof responses. These are pur
 | Key prefix | Plan | Stripe | Witnesses | Limits |
 |---|---|---|---|---|
 | `mcp_free_*` | Free | No | 3 (Ed25519, TSA, Archive.org) | 100/month |
-| `mcp_test_*` | Test | Test mode (no real charges) | 4 | Unlimited |
-| `mcp_pro_*` | Pro | Live (0.50 EUR/call) | 4 (+ Stripe receipt) | 100/day |
+| `mcp_test_*` | Test | Test mode (no real charges) | 3 | Unlimited |
+| `mcp_pro_*` | Pro | Prepaid credits (0.10 EUR/proof) | 3 (+ Stripe receipt) | 100/day |
 
 ## Environment variables
 
@@ -211,7 +233,7 @@ The Trust Layer now includes additional fields in proof responses. These are pur
 ```
 arkforge-agent-client/
   setup_card.py      # One-time: save payment method
-  agent.py           # scan / pay / verify — all via Trust Layer
+  agent.py           # scan / pay / credits / verify — all via Trust Layer
   logs/              # Transaction logs (JSON)
   proofs/            # Cryptographic proofs (JSON)
   requirements.txt   # Only: requests

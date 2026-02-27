@@ -6,8 +6,9 @@ Routes ALL calls through ArkForge Trust Layer (certifying proxy).
 Every transaction gets a SHA-256 proof chain + RFC 3161 certified timestamp.
 
 Modes:
-  scan <repo_url>   — Pay 0.50 EUR + scan repo via Trust Layer
-  pay               — Pay 0.50 EUR, no scan (payment proof only)
+  scan <repo_url>   — Scan repo via Trust Layer (0.10 EUR/proof, prepaid credits)
+  pay               — Payment proof only (0.10 EUR from prepaid credits)
+  credits <amount>  — Buy prepaid credits (min 1 EUR, max 100 EUR)
   verify <proof_id> — Verify an existing proof
 
 Prerequisites:
@@ -40,7 +41,7 @@ PROOF_DIR = Path(__file__).parent / "proofs"
 
 
 AGENT_IDENTITY = "arkforge-agent-client"
-AGENT_VERSION = "1.1.0"
+AGENT_VERSION = "1.2.0"
 
 
 def _headers() -> dict:
@@ -52,15 +53,13 @@ def _headers() -> dict:
     }
 
 
-def _call_proxy(target: str, amount: float, payload: dict, description: str = "", method: str = "POST") -> dict:
-    """Call Trust Layer /v1/proxy — charge, forward, prove."""
+def _call_proxy(target: str, payload: dict, description: str = "", method: str = "POST") -> dict:
+    """Call Trust Layer /v1/proxy — debit credits, forward, prove."""
     resp = requests.post(
         f"{TRUST_LAYER_BASE}/v1/proxy",
         headers=_headers(),
         json={
             "target": target,
-            "amount": amount,
-            "currency": "eur",
             "payload": payload,
             "method": method,
             "description": description,
@@ -84,14 +83,13 @@ def _call_proxy(target: str, amount: float, payload: dict, description: str = ""
 
 
 def pay() -> dict:
-    """Pay 0.50 EUR through Trust Layer. No upstream call — payment proof only."""
+    """Pay 0.10 EUR from prepaid credits. No upstream call — payment proof only."""
     if not API_KEY:
         return {"error": "TRUST_LAYER_API_KEY not set"}
 
     # Target the pricing endpoint (lightweight, always available)
     return _call_proxy(
         target="https://arkforge.fr/trust/v1/pricing",
-        amount=0.50,
         payload={},
         description="Agent payment — proof of concept",
         method="GET",
@@ -99,13 +97,12 @@ def pay() -> dict:
 
 
 def scan_repo(repo_url: str) -> dict:
-    """Pay 0.50 EUR + scan a repository for EU AI Act compliance."""
+    """Scan a repository for EU AI Act compliance (0.10 EUR from prepaid credits)."""
     if not API_KEY:
         return {"error": "TRUST_LAYER_API_KEY not set"}
 
     return _call_proxy(
         target=SCAN_API_TARGET,
-        amount=0.50,
         payload={"repo_url": repo_url},
         description=f"EU AI Act compliance scan: {repo_url}",
     )
@@ -119,6 +116,28 @@ def verify_proof(proof_id: str) -> dict:
     )
     if resp.status_code != 200:
         return {"error": f"HTTP {resp.status_code}", "detail": resp.text[:500]}
+    return resp.json()
+
+
+def buy_credits(amount: float) -> dict:
+    """Buy prepaid credits via Trust Layer (charges saved Stripe card)."""
+    if not API_KEY:
+        return {"error": "TRUST_LAYER_API_KEY not set"}
+
+    resp = requests.post(
+        f"{TRUST_LAYER_BASE}/v1/credits/buy",
+        headers=_headers(),
+        json={"amount": amount},
+        timeout=TIMEOUT_SECONDS,
+    )
+
+    if resp.status_code != 200:
+        try:
+            detail = resp.json()
+        except Exception:
+            detail = resp.text
+        return {"error": f"HTTP {resp.status_code}", "detail": detail}
+
     return resp.json()
 
 
@@ -190,7 +209,7 @@ def _save_log(command: str, result: dict, extra: dict = None):
     if extra:
         log_entry.update(extra)
 
-    prefix = "scan" if command == "scan" else "pay"
+    prefix = command if command in ("scan", "pay", "credits") else "pay"
     log_file = LOG_DIR / f"{prefix}_{now.strftime('%Y%m%d_%H%M%S')}.json"
     log_file.write_text(json.dumps(log_entry, indent=2, ensure_ascii=False))
     (LOG_DIR / "latest_transaction.json").write_text(json.dumps(log_entry, indent=2, ensure_ascii=False))
@@ -207,9 +226,10 @@ def _save_log(command: str, result: dict, extra: dict = None):
 def main():
     if len(sys.argv) < 2:
         print("Usage:")
-        print("  python3 agent.py scan <repo_url>    # Pay 0.50 EUR + scan (via Trust Layer)")
-        print("  python3 agent.py pay                # Pay 0.50 EUR (proof only)")
-        print("  python3 agent.py verify <proof_id>  # Verify a proof")
+        print("  python3 agent.py scan <repo_url>      # Scan repo (0.10 EUR from credits)")
+        print("  python3 agent.py pay                   # Payment proof only (0.10 EUR)")
+        print("  python3 agent.py credits <amount_eur>  # Buy prepaid credits (min 1, max 100)")
+        print("  python3 agent.py verify <proof_id>     # Verify a proof")
         print()
         print("Setup:")
         print("  export TRUST_LAYER_API_KEY='mcp_pro_...'")
@@ -220,7 +240,7 @@ def main():
 
     if command == "pay":
         print("=" * 60)
-        print("AGENT PAYMENT — 0.50 EUR via Trust Layer")
+        print("AGENT PAYMENT — 0.10 EUR from prepaid credits")
         print("=" * 60)
         print(f"Timestamp:   {ts}")
         print(f"Trust Layer: {TRUST_LAYER_BASE}/v1/proxy")
@@ -239,13 +259,48 @@ def main():
         print("[PAYMENT]")
         print(f"  Amount:    {payment.get('amount', 'N/A')} {payment.get('currency', 'EUR')}")
         print(f"  Status:    {payment.get('status', 'N/A')}")
-        print(f"  Stripe ID: {payment.get('transaction_id', 'N/A')}")
-        print(f"  Receipt:   {payment.get('receipt_url', 'N/A')}")
+        print(f"  Txn ID:    {payment.get('transaction_id', 'N/A')}")
+        if payment.get("receipt_url"):
+            print(f"  Receipt:   {payment['receipt_url']}")
         print()
         _print_proof(result)
         _print_attestation(result)
         _print_ghost_stamp(result)
         _save_log("pay", result)
+        print("=" * 60)
+
+    elif command == "credits":
+        if len(sys.argv) < 3:
+            print("Usage: python3 agent.py credits <amount_eur>")
+            print("  Min: 1.00 EUR (= 10 proofs)")
+            print("  Max: 100.00 EUR (= 1000 proofs)")
+            sys.exit(1)
+
+        amount = float(sys.argv[2])
+        print("=" * 60)
+        print(f"BUY CREDITS — {amount:.2f} EUR")
+        print("=" * 60)
+        print(f"Timestamp:   {ts}")
+        print(f"Trust Layer: {TRUST_LAYER_BASE}/v1/credits/buy")
+        print(f"API Key:     {API_KEY[:12]}..." if API_KEY else "API Key:     NOT SET")
+        print()
+
+        result = buy_credits(amount)
+
+        if "error" in result:
+            print(f"[FAILED] {result['error']}")
+            if "detail" in result:
+                print(f"  {json.dumps(result['detail'], indent=2)[:500]}")
+            sys.exit(1)
+
+        print("[CREDITS PURCHASED]")
+        print(f"  Added:     {result.get('credits_added', 'N/A')} EUR")
+        print(f"  Balance:   {result.get('balance', 'N/A')} EUR")
+        print(f"  Proofs:    {result.get('proofs_available', 'N/A')} available")
+        if result.get("receipt_url"):
+            print(f"  Receipt:   {result['receipt_url']}")
+        print()
+        _save_log("credits", result, {"amount": amount})
         print("=" * 60)
 
     elif command == "scan":
@@ -260,7 +315,7 @@ def main():
         print("=" * 60)
         print(f"Timestamp:   {ts}")
         print(f"Target:      {repo_url}")
-        print(f"Price:       0.50 EUR")
+        print(f"Price:       0.10 EUR (from prepaid credits)")
         print(f"Trust Layer: {TRUST_LAYER_BASE}/v1/proxy")
         print(f"Scan API:    {SCAN_API_TARGET}")
         print(f"API Key:     {API_KEY[:12]}..." if API_KEY else "API Key:     NOT SET")
@@ -279,8 +334,9 @@ def main():
         print("[PAYMENT]")
         print(f"  Amount:    {payment.get('amount', 'N/A')} {payment.get('currency', 'EUR')}")
         print(f"  Status:    {payment.get('status', 'N/A')}")
-        print(f"  Stripe ID: {payment.get('transaction_id', 'N/A')}")
-        print(f"  Receipt:   {payment.get('receipt_url', 'N/A')}")
+        print(f"  Txn ID:    {payment.get('transaction_id', 'N/A')}")
+        if payment.get("receipt_url"):
+            print(f"  Receipt:   {payment['receipt_url']}")
         print()
 
         # Scan results (from upstream response)
@@ -323,7 +379,7 @@ def main():
 
     else:
         print(f"Unknown command: {command}")
-        print("Use 'scan', 'pay', or 'verify'")
+        print("Use 'scan', 'pay', 'credits', or 'verify'")
         sys.exit(1)
 
 
