@@ -1,0 +1,10 @@
+# Runtime state
+.last_receipt.json
+
+# Python
+__pycache__/
+*.pyc
+
+# Local data
+logs/
+proofs/

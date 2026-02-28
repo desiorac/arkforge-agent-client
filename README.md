@@ -10,7 +10,7 @@ A proof-of-concept demonstrating **autonomous agent-to-agent paid transactions**
 
 One agent (this client) calls another agent (the [ArkForge MCP EU AI Act](https://github.com/ark-forge/mcp-eu-ai-act) scanner) to scan a code repository for EU AI Act compliance. Every transaction flows through the Trust Layer, which produces a tamper-proof cryptographic proof (SHA-256 chain + Ed25519 signature + RFC 3161 certified timestamp). Pro plan uses prepaid credits (0.10 EUR/proof) with Stripe payment as a witness.
 
-Optionally attach a Stripe receipt URL (`--receipt-url`) — ArkForge fetches, hashes, parses, and binds it to the proof as a 4th independent witness.
+**Auto-receipt**: when you buy credits, the Stripe receipt URL is saved locally and auto-attached to subsequent calls as a 4th independent witness. No extra flags needed. Override with `--receipt-url` or skip with `--no-receipt`.
 
 No human clicks, no browser, no manual approval.
 
@@ -121,13 +121,13 @@ Open the returned `checkout_url` in a browser and enter a card. For test mode, u
 
 ### 2. Buy credits (Pro plan)
 
-Before using the proxy, purchase prepaid credits:
+Before using the proxy, purchase prepaid credits. The Stripe receipt URL is **automatically saved** for future calls.
 
 **Via agent.py:**
 
 ```bash
 export TRUST_LAYER_API_KEY="mcp_pro_..."
-python3 agent.py credits 10    # Buy 10 EUR = 100 proofs
+python3 agent.py credits 10    # Buy 10 EUR = 100 proofs — receipt auto-saved
 ```
 
 **Via curl:**
@@ -148,17 +148,24 @@ export TRUST_LAYER_API_KEY="mcp_test_..."    # or mcp_pro_... for live
 python3 agent.py scan https://github.com/owner/repo
 ```
 
-With external receipt verification (optional):
+If you purchased credits earlier, the saved receipt is **auto-attached** as payment evidence. You can also provide one manually:
 
 ```bash
 python3 agent.py scan https://github.com/owner/repo \
   --receipt-url "https://pay.stripe.com/receipts/payment/CAcaFwoV..."
 ```
 
+To skip auto-attach for a single call:
+
+```bash
+python3 agent.py scan https://github.com/owner/repo --no-receipt
+```
+
 ### 4. Just pay (no scan)
 
 ```bash
-python3 agent.py pay
+python3 agent.py pay                     # auto-attaches saved receipt if any
+python3 agent.py pay --no-receipt        # skip auto-attach
 python3 agent.py pay --receipt-url "https://pay.stripe.com/receipts/payment/..."
 ```
 
@@ -246,9 +253,9 @@ With `--receipt-url`, an additional section appears:
 
 | Command | Description |
 |---------|-------------|
-| `python3 agent.py scan <repo_url> [--receipt-url URL]` | Scan repo via Trust Layer (0.10 EUR from credits on Pro, free on Free) |
-| `python3 agent.py pay [--receipt-url URL]` | Payment + proof only, no scan (0.10 EUR from credits) |
-| `python3 agent.py credits <amount>` | Buy prepaid credits (min 1 EUR, max 100 EUR) |
+| `python3 agent.py scan <repo_url> [--receipt-url URL] [--no-receipt]` | Scan repo via Trust Layer (auto-attaches saved receipt) |
+| `python3 agent.py pay [--receipt-url URL] [--no-receipt]` | Payment + proof only (auto-attaches saved receipt) |
+| `python3 agent.py credits <amount>` | Buy prepaid credits — **saves receipt URL** for future calls |
 | `python3 agent.py verify <proof_id>` | Verify an existing proof (shows payment evidence if present) |
 
 ## Plans
@@ -271,11 +278,12 @@ With `--receipt-url`, an additional section appears:
 
 ```
 arkforge-agent-client/
-  setup_card.py      # One-time: save payment method
-  agent.py           # scan / pay / credits / verify — all via Trust Layer
-  logs/              # Transaction logs (JSON)
-  proofs/            # Cryptographic proofs (JSON)
-  requirements.txt   # Only: requests
+  setup_card.py          # One-time: save payment method
+  agent.py               # scan / pay / credits / verify — all via Trust Layer
+  .last_receipt.json     # Auto-saved Stripe receipt URL (gitignored)
+  logs/                  # Transaction logs (JSON)
+  proofs/                # Cryptographic proofs (JSON)
+  requirements.txt       # Only: requests
 ```
 
 ## Roadmap

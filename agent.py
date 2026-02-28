@@ -6,10 +6,16 @@ Routes ALL calls through ArkForge Trust Layer (certifying proxy).
 Every transaction gets a SHA-256 proof chain + RFC 3161 certified timestamp.
 
 Modes:
-  scan <repo_url> [--receipt-url URL]  — Scan repo via Trust Layer (0.10 EUR/proof)
-  pay [--receipt-url URL]              — Payment proof only (0.10 EUR from credits)
-  credits <amount>                     — Buy prepaid credits (min 1 EUR, max 100 EUR)
-  verify <proof_id>                    — Verify an existing proof
+  scan <repo_url>   — Scan repo via Trust Layer (0.10 EUR/proof)
+  pay               — Payment proof only (0.10 EUR from credits)
+  credits <amount>  — Buy prepaid credits (min 1 EUR, max 100 EUR)
+  verify <proof_id> — Verify an existing proof
+
+Receipt auto-attach:
+  After 'credits', the Stripe receipt URL is saved locally.
+  Subsequent 'scan' and 'pay' calls auto-attach it as payment evidence.
+  --receipt-url URL   Override with a specific receipt URL
+  --no-receipt        Skip auto-attach for this call
 
 Prerequisites:
     pip install requests
@@ -38,10 +44,31 @@ if not API_KEY:
 TIMEOUT_SECONDS = 130
 LOG_DIR = Path(__file__).parent / "logs"
 PROOF_DIR = Path(__file__).parent / "proofs"
+RECEIPT_FILE = Path(__file__).parent / ".last_receipt.json"
 
 
 AGENT_IDENTITY = "arkforge-agent-client"
-AGENT_VERSION = "1.3.0"
+AGENT_VERSION = "1.4.0"
+
+
+def _save_receipt(receipt_url: str, amount: float = 0):
+    """Save last Stripe receipt URL for auto-attach on future calls."""
+    RECEIPT_FILE.write_text(json.dumps({
+        "receipt_url": receipt_url,
+        "saved_at": datetime.now(timezone.utc).isoformat(),
+        "amount": amount,
+    }, indent=2))
+
+
+def _load_receipt() -> str:
+    """Load last saved receipt URL. Returns empty string if none."""
+    if not RECEIPT_FILE.exists():
+        return ""
+    try:
+        data = json.loads(RECEIPT_FILE.read_text())
+        return data.get("receipt_url", "")
+    except (json.JSONDecodeError, OSError):
+        return ""
 
 
 def _headers() -> dict:
@@ -274,10 +301,14 @@ def _save_log(command: str, result: dict, extra: dict = None):
 def main():
     if len(sys.argv) < 2:
         print("Usage:")
-        print("  python3 agent.py scan <repo_url> [--receipt-url URL]  # Scan repo (0.10 EUR)")
-        print("  python3 agent.py pay [--receipt-url URL]              # Payment proof (0.10 EUR)")
-        print("  python3 agent.py credits <amount_eur>                 # Buy credits (1-100 EUR)")
-        print("  python3 agent.py verify <proof_id>                    # Verify a proof")
+        print("  python3 agent.py scan <repo_url>       # Scan repo (0.10 EUR)")
+        print("  python3 agent.py pay                    # Payment proof (0.10 EUR)")
+        print("  python3 agent.py credits <amount_eur>   # Buy credits (1-100 EUR)")
+        print("  python3 agent.py verify <proof_id>      # Verify a proof")
+        print()
+        print("Receipt auto-attach (after buying credits):")
+        print("  --receipt-url URL   Override with a specific receipt")
+        print("  --no-receipt        Skip auto-attach for this call")
         print()
         print("Setup:")
         print("  export TRUST_LAYER_API_KEY='mcp_pro_...'")
@@ -286,7 +317,13 @@ def main():
     command = sys.argv[1]
     ts = datetime.now(timezone.utc).isoformat()
 
+    no_receipt = "--no-receipt" in sys.argv
     receipt_url = _extract_receipt_url(sys.argv)
+    if not receipt_url and not no_receipt:
+        receipt_url = _load_receipt()
+        if receipt_url:
+            print(f"[AUTO] Using saved receipt: {receipt_url[:60]}...")
+            print()
 
     if command == "pay":
         print("=" * 60)
@@ -352,6 +389,8 @@ def main():
         print(f"  Proofs:    {result.get('proofs_available', 'N/A')} available")
         if result.get("receipt_url"):
             print(f"  Receipt:   {result['receipt_url']}")
+            _save_receipt(result["receipt_url"], amount)
+            print(f"  [AUTO] Receipt saved — will be attached to future scan/pay calls")
         print()
         _save_log("credits", result, {"amount": amount})
         print("=" * 60)
