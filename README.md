@@ -1,5 +1,9 @@
 # ArkForge Agent Client
 
+[![GitHub Stars](https://img.shields.io/github/stars/ark-forge/arkforge-agent-client?style=flat&label=⭐%20Star%20this%20repo)](https://github.com/ark-forge/arkforge-agent-client/stargazers)
+
+If this demo is useful to you, a ⭐ on GitHub helps others find it.
+
 ## What is this?
 
 A proof-of-concept demonstrating **autonomous agent-to-agent paid transactions** through the [ArkForge Trust Layer](https://github.com/ark-forge/trust-layer).
