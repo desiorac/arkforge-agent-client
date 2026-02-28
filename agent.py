@@ -6,10 +6,10 @@ Routes ALL calls through ArkForge Trust Layer (certifying proxy).
 Every transaction gets a SHA-256 proof chain + RFC 3161 certified timestamp.
 
 Modes:
-  scan <repo_url>   — Scan repo via Trust Layer (0.10 EUR/proof, prepaid credits)
-  pay               — Payment proof only (0.10 EUR from prepaid credits)
-  credits <amount>  — Buy prepaid credits (min 1 EUR, max 100 EUR)
-  verify <proof_id> — Verify an existing proof
+  scan <repo_url> [--receipt-url URL]  — Scan repo via Trust Layer (0.10 EUR/proof)
+  pay [--receipt-url URL]              — Payment proof only (0.10 EUR from credits)
+  credits <amount>                     — Buy prepaid credits (min 1 EUR, max 100 EUR)
+  verify <proof_id>                    — Verify an existing proof
 
 Prerequisites:
     pip install requests
@@ -41,7 +41,7 @@ PROOF_DIR = Path(__file__).parent / "proofs"
 
 
 AGENT_IDENTITY = "arkforge-agent-client"
-AGENT_VERSION = "1.2.0"
+AGENT_VERSION = "1.3.0"
 
 
 def _headers() -> dict:
@@ -53,17 +53,24 @@ def _headers() -> dict:
     }
 
 
-def _call_proxy(target: str, payload: dict, description: str = "", method: str = "POST") -> dict:
+def _call_proxy(target: str, payload: dict, description: str = "", method: str = "POST",
+                receipt_url: str = "") -> dict:
     """Call Trust Layer /v1/proxy — debit credits, forward, prove."""
+    body = {
+        "target": target,
+        "payload": payload,
+        "method": method,
+        "description": description,
+    }
+    if receipt_url:
+        body["payment_evidence"] = {
+            "type": "stripe",
+            "receipt_url": receipt_url,
+        }
     resp = requests.post(
         f"{TRUST_LAYER_BASE}/v1/proxy",
         headers=_headers(),
-        json={
-            "target": target,
-            "payload": payload,
-            "method": method,
-            "description": description,
-        },
+        json=body,
         timeout=TIMEOUT_SECONDS,
     )
 
@@ -82,7 +89,7 @@ def _call_proxy(target: str, payload: dict, description: str = "", method: str =
     return result
 
 
-def pay() -> dict:
+def pay(receipt_url: str = "") -> dict:
     """Pay 0.10 EUR from prepaid credits. No upstream call — payment proof only."""
     if not API_KEY:
         return {"error": "TRUST_LAYER_API_KEY not set"}
@@ -93,10 +100,11 @@ def pay() -> dict:
         payload={},
         description="Agent payment — proof of concept",
         method="GET",
+        receipt_url=receipt_url,
     )
 
 
-def scan_repo(repo_url: str) -> dict:
+def scan_repo(repo_url: str, receipt_url: str = "") -> dict:
     """Scan a repository for EU AI Act compliance (0.10 EUR from prepaid credits)."""
     if not API_KEY:
         return {"error": "TRUST_LAYER_API_KEY not set"}
@@ -105,6 +113,7 @@ def scan_repo(repo_url: str) -> dict:
         target=SCAN_API_TARGET,
         payload={"repo_url": repo_url},
         description=f"EU AI Act compliance scan: {repo_url}",
+        receipt_url=receipt_url,
     )
 
 
@@ -139,6 +148,45 @@ def buy_credits(amount: float) -> dict:
         return {"error": f"HTTP {resp.status_code}", "detail": detail}
 
     return resp.json()
+
+
+def _extract_receipt_url(args: list) -> str:
+    """Extract --receipt-url value from CLI arguments."""
+    for i, arg in enumerate(args):
+        if arg == "--receipt-url" and i + 1 < len(args):
+            return args[i + 1]
+        if arg.startswith("--receipt-url="):
+            return arg.split("=", 1)[1]
+    return ""
+
+
+def _print_payment_evidence(result: dict):
+    """Print external payment evidence from proof."""
+    proof = result if "payment_evidence" in result else result.get("proof", {})
+    pe = proof.get("payment_evidence")
+    if not pe:
+        return
+    print("[PAYMENT EVIDENCE — External Receipt]")
+    status = pe.get("receipt_fetch_status", "N/A")
+    icon = "OK" if status == "fetched" else "FAILED"
+    print(f"  Fetch:     {icon} ({status})")
+    if pe.get("receipt_content_hash"):
+        print(f"  Hash:      {pe['receipt_content_hash'][:48]}...")
+    if pe.get("parsing_status"):
+        print(f"  Parsing:   {pe['parsing_status']}")
+    parsed = pe.get("parsed_fields")
+    if parsed and isinstance(parsed, dict):
+        if parsed.get("amount") is not None:
+            print(f"  Amount:    {parsed['amount']} {parsed.get('currency', '')}")
+        if parsed.get("status"):
+            print(f"  Status:    {parsed['status']}")
+        if parsed.get("date"):
+            print(f"  Date:      {parsed['date']}")
+    verification = pe.get("payment_verification", "N/A")
+    print(f"  Verified:  {verification}")
+    if pe.get("receipt_fetch_error"):
+        print(f"  Error:     {pe['receipt_fetch_error']}")
+    print()
 
 
 def _print_proof(result: dict):
@@ -226,10 +274,10 @@ def _save_log(command: str, result: dict, extra: dict = None):
 def main():
     if len(sys.argv) < 2:
         print("Usage:")
-        print("  python3 agent.py scan <repo_url>      # Scan repo (0.10 EUR from credits)")
-        print("  python3 agent.py pay                   # Payment proof only (0.10 EUR)")
-        print("  python3 agent.py credits <amount_eur>  # Buy prepaid credits (min 1, max 100)")
-        print("  python3 agent.py verify <proof_id>     # Verify a proof")
+        print("  python3 agent.py scan <repo_url> [--receipt-url URL]  # Scan repo (0.10 EUR)")
+        print("  python3 agent.py pay [--receipt-url URL]              # Payment proof (0.10 EUR)")
+        print("  python3 agent.py credits <amount_eur>                 # Buy credits (1-100 EUR)")
+        print("  python3 agent.py verify <proof_id>                    # Verify a proof")
         print()
         print("Setup:")
         print("  export TRUST_LAYER_API_KEY='mcp_pro_...'")
@@ -238,6 +286,8 @@ def main():
     command = sys.argv[1]
     ts = datetime.now(timezone.utc).isoformat()
 
+    receipt_url = _extract_receipt_url(sys.argv)
+
     if command == "pay":
         print("=" * 60)
         print("AGENT PAYMENT — 0.10 EUR from prepaid credits")
@@ -245,9 +295,11 @@ def main():
         print(f"Timestamp:   {ts}")
         print(f"Trust Layer: {TRUST_LAYER_BASE}/v1/proxy")
         print(f"API Key:     {API_KEY[:12]}..." if API_KEY else "API Key:     NOT SET")
+        if receipt_url:
+            print(f"Receipt URL: {receipt_url[:60]}...")
         print()
 
-        result = pay()
+        result = pay(receipt_url=receipt_url)
 
         if "error" in result:
             print(f"[FAILED] {result['error']}")
@@ -264,6 +316,7 @@ def main():
             print(f"  Receipt:   {payment['receipt_url']}")
         print()
         _print_proof(result)
+        _print_payment_evidence(result)
         _print_attestation(result)
         _print_ghost_stamp(result)
         _save_log("pay", result)
@@ -319,9 +372,11 @@ def main():
         print(f"Trust Layer: {TRUST_LAYER_BASE}/v1/proxy")
         print(f"Scan API:    {SCAN_API_TARGET}")
         print(f"API Key:     {API_KEY[:12]}..." if API_KEY else "API Key:     NOT SET")
+        if receipt_url:
+            print(f"Receipt URL: {receipt_url[:60]}...")
         print()
 
-        result = scan_repo(repo_url)
+        result = scan_repo(repo_url, receipt_url=receipt_url)
 
         if "error" in result:
             print(f"[FAILED] {result['error']}")
@@ -357,6 +412,7 @@ def main():
         print()
 
         _print_proof(result)
+        _print_payment_evidence(result)
         _print_attestation(result)
         _print_ghost_stamp(result)
         _save_log("scan", result, {"repo_url": repo_url})
@@ -376,6 +432,8 @@ def main():
             sys.exit(1)
 
         print(json.dumps(result, indent=2))
+        # Show payment evidence summary if present
+        _print_payment_evidence(result)
 
     else:
         print(f"Unknown command: {command}")

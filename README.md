@@ -10,6 +10,8 @@ A proof-of-concept demonstrating **autonomous agent-to-agent paid transactions**
 
 One agent (this client) calls another agent (the [ArkForge MCP EU AI Act](https://github.com/ark-forge/mcp-eu-ai-act) scanner) to scan a code repository for EU AI Act compliance. Every transaction flows through the Trust Layer, which produces a tamper-proof cryptographic proof (SHA-256 chain + Ed25519 signature + RFC 3161 certified timestamp). Pro plan uses prepaid credits (0.10 EUR/proof) with Stripe payment as a witness.
 
+Optionally attach a Stripe receipt URL (`--receipt-url`) — ArkForge fetches, hashes, parses, and binds it to the proof as a 4th independent witness.
+
 No human clicks, no browser, no manual approval.
 
 ## Quick usage
@@ -39,14 +41,16 @@ Agent Client
 Trust Layer (/v1/proxy)
     |--- Validates API key
     |--- Debits prepaid credits (Pro only — Free skips this)
+    |--- Fetches external receipt if --receipt-url provided (optional)
     |--- Forwards scan request to upstream API
     |--- Hashes request + response (SHA-256 chain)
+    |--- Binds receipt content hash to chain (if present)
     |--- Signs with Ed25519
     |--- Submits to RFC 3161 TSA (certified timestamp)
     |--- Returns proof + scan result
     |
     v
-Agent receives: scan report + cryptographic proof
+Agent receives: scan report + cryptographic proof [+ payment evidence]
 ```
 
 **Each layer is independently verifiable:**
@@ -57,6 +61,7 @@ Agent receives: scan report + cryptographic proof
 | SHA-256 hash chain | Trust Layer verification URL | No (deterministic) | All |
 | RFC 3161 TSA | `openssl ts -verify` | No (certified by trusted TSA) | All |
 | Stripe receipt | Stripe dashboard (for credit purchase) | No (Stripe is source of truth) | Pro only |
+| External receipt | `--receipt-url` — fetched, hashed, bound to proof | No (SHA-256 of raw content) | All (optional) |
 | Scan result | Re-running scan on same repo | No (deterministic) | All |
 | Local log | `logs/*.json` + `proofs/*.json` | Tamper-evident (contains hashes) | All |
 
@@ -143,10 +148,18 @@ export TRUST_LAYER_API_KEY="mcp_test_..."    # or mcp_pro_... for live
 python3 agent.py scan https://github.com/owner/repo
 ```
 
+With external receipt verification (optional):
+
+```bash
+python3 agent.py scan https://github.com/owner/repo \
+  --receipt-url "https://pay.stripe.com/receipts/payment/CAcaFwoV..."
+```
+
 ### 4. Just pay (no scan)
 
 ```bash
 python3 agent.py pay
+python3 agent.py pay --receipt-url "https://pay.stripe.com/receipts/payment/..."
 ```
 
 ### 5. Verify a proof
@@ -203,34 +216,48 @@ API Key:     mcp_test_93f...
 ============================================================
 ```
 
-### New fields (additive, no client changes required)
+With `--receipt-url`, an additional section appears:
 
-The Trust Layer now includes additional fields in proof responses. These are purely additive — no changes needed on the agent client side:
+```
+[PAYMENT EVIDENCE — External Receipt]
+  Fetch:     OK (fetched)
+  Hash:      sha256:af65b75f3901dfd0ed9590a009bf7283e318...
+  Parsing:   success
+  Amount:    25.0 usd
+  Status:    Paid
+  Date:      February 28, 2026
+  Verified:  fetched
+```
+
+### Proof fields
 
 | Field | Description |
 |-------|-------------|
-| `proof.spec_version` | Proof format version (see [proof-spec](https://github.com/ark-forge/proof-spec)) |
+| `proof.spec_version` | Proof format version: `1.1` (standard) or `2.0` (with receipt). See [proof-spec](https://github.com/ark-forge/proof-spec) |
 | `proof.arkforge_signature` | Ed25519 signature of the chain hash |
 | `proof.arkforge_pubkey` | ArkForge's public key for verification |
 | `proof.upstream_timestamp` | Upstream service's `Date` header |
 | `proof.timestamp_authority.tsr_base64` | Embedded TSR file (base64, available after background processing) |
+| `proof.payment_evidence` | External receipt verification result (when `--receipt-url` was provided) |
+| `proof.payment_evidence.receipt_content_hash` | SHA-256 of raw receipt bytes — bound to chain hash |
+| `proof.payment_evidence.parsed_fields` | Extracted amount, currency, status, date (best-effort) |
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `python3 agent.py scan <repo_url>` | Scan repo via Trust Layer (0.10 EUR from credits on Pro, free on Free) |
-| `python3 agent.py pay` | Payment + proof only, no scan (0.10 EUR from credits) |
+| `python3 agent.py scan <repo_url> [--receipt-url URL]` | Scan repo via Trust Layer (0.10 EUR from credits on Pro, free on Free) |
+| `python3 agent.py pay [--receipt-url URL]` | Payment + proof only, no scan (0.10 EUR from credits) |
 | `python3 agent.py credits <amount>` | Buy prepaid credits (min 1 EUR, max 100 EUR) |
-| `python3 agent.py verify <proof_id>` | Verify an existing proof |
+| `python3 agent.py verify <proof_id>` | Verify an existing proof (shows payment evidence if present) |
 
 ## Plans
 
 | Key prefix | Plan | Stripe | Witnesses | Limits |
 |---|---|---|---|---|
-| `mcp_free_*` | Free | No | 3 (Ed25519, TSA, Archive.org) | 100/month |
-| `mcp_test_*` | Test | Test mode (no real charges) | 3 | Unlimited |
-| `mcp_pro_*` | Pro | Prepaid credits (0.10 EUR/proof) | 3 (+ Stripe receipt) | 100/day |
+| `mcp_free_*` | Free | No | 3 (Ed25519, TSA, Archive.org) + optional external receipt | 100/month |
+| `mcp_test_*` | Test | Test mode (no real charges) | 3 + optional external receipt | Unlimited |
+| `mcp_pro_*` | Pro | Prepaid credits (0.10 EUR/proof) | 3 (+ Stripe receipt) + optional external receipt | 100/day |
 
 ## Environment variables
 
