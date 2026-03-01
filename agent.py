@@ -48,7 +48,7 @@ RECEIPT_FILE = Path(__file__).parent / ".last_receipt.json"
 
 
 AGENT_IDENTITY = "arkforge-agent-client"
-AGENT_VERSION = "1.4.0"
+AGENT_VERSION = "1.5.0"
 
 
 def _save_receipt(receipt_url: str, amount: float = 0):
@@ -148,6 +148,47 @@ def verify_proof(proof_id: str) -> dict:
     """Verify an existing proof via Trust Layer."""
     resp = requests.get(
         f"{TRUST_LAYER_BASE}/v1/proof/{proof_id}",
+        timeout=30,
+    )
+    if resp.status_code != 200:
+        return {"error": f"HTTP {resp.status_code}", "detail": resp.text[:500]}
+    return resp.json()
+
+
+def get_reputation(agent_id: str) -> dict:
+    """Get public reputation score for an agent."""
+    resp = requests.get(
+        f"{TRUST_LAYER_BASE}/v1/agent/{agent_id}/reputation",
+        timeout=30,
+    )
+    if resp.status_code != 200:
+        return {"error": f"HTTP {resp.status_code}", "detail": resp.text[:500]}
+    return resp.json()
+
+
+def file_dispute(proof_id: str, reason: str) -> dict:
+    """File a dispute against a proof."""
+    if not API_KEY:
+        return {"error": "TRUST_LAYER_API_KEY not set"}
+    resp = requests.post(
+        f"{TRUST_LAYER_BASE}/v1/disputes",
+        headers=_headers(),
+        json={"proof_id": proof_id, "reason": reason},
+        timeout=30,
+    )
+    if resp.status_code not in (200, 201):
+        try:
+            detail = resp.json()
+        except Exception:
+            detail = resp.text
+        return {"error": f"HTTP {resp.status_code}", "detail": detail}
+    return resp.json()
+
+
+def get_disputes(agent_id: str) -> dict:
+    """Get dispute history for an agent."""
+    resp = requests.get(
+        f"{TRUST_LAYER_BASE}/v1/agent/{agent_id}/disputes",
         timeout=30,
     )
     if resp.status_code != 200:
@@ -305,6 +346,9 @@ def main():
         print("  python3 agent.py pay                    # Payment proof (0.10 EUR)")
         print("  python3 agent.py credits <amount_eur>   # Buy credits (1-100 EUR)")
         print("  python3 agent.py verify <proof_id>      # Verify a proof")
+        print("  python3 agent.py reputation <agent_id>  # Check agent reputation (0-100)")
+        print("  python3 agent.py dispute <proof_id> \"reason\"  # File a dispute")
+        print("  python3 agent.py disputes <agent_id>    # View dispute history")
         print()
         print("Receipt auto-attach (after buying credits):")
         print("  --receipt-url URL   Override with a specific receipt")
@@ -474,9 +518,96 @@ def main():
         # Show payment evidence summary if present
         _print_payment_evidence(result)
 
+    elif command == "reputation":
+        if len(sys.argv) < 3:
+            print("Usage: python3 agent.py reputation <agent_id>")
+            sys.exit(1)
+
+        agent_id = sys.argv[2]
+        print(f"Fetching reputation for: {agent_id}")
+        result = get_reputation(agent_id)
+
+        if "error" in result:
+            print(f"[FAILED] {result['error']}")
+            sys.exit(1)
+
+        print("=" * 60)
+        print("AGENT REPUTATION")
+        print("=" * 60)
+        print(f"  Agent:       {result.get('agent_id', agent_id)}")
+        print(f"  Score:       {result.get('score', 'N/A')}/100")
+        dims = result.get("dimensions", {})
+        if dims:
+            print("  Dimensions:")
+            for dim, val in dims.items():
+                print(f"    {dim}: {val}")
+        penalties = result.get("penalties", [])
+        if penalties:
+            print(f"  Penalties:   {len(penalties)}")
+            for p in penalties[:5]:
+                print(f"    - {p.get('reason', p)}")
+        if result.get("signature"):
+            print(f"  Signature:   {str(result['signature'])[:30]}...")
+        print("=" * 60)
+
+    elif command == "dispute":
+        if len(sys.argv) < 4:
+            print('Usage: python3 agent.py dispute <proof_id> "reason"')
+            sys.exit(1)
+
+        proof_id = sys.argv[2]
+        reason = sys.argv[3]
+        print(f"Filing dispute for proof: {proof_id}")
+        print(f"Reason: {reason}")
+        result = file_dispute(proof_id, reason)
+
+        if "error" in result:
+            print(f"[FAILED] {result['error']}")
+            if "detail" in result:
+                print(f"  {json.dumps(result['detail'], indent=2)[:500]}")
+            sys.exit(1)
+
+        print("=" * 60)
+        print("DISPUTE FILED")
+        print("=" * 60)
+        print(f"  Dispute ID:  {result.get('dispute_id', 'N/A')}")
+        print(f"  Proof ID:    {result.get('proof_id', proof_id)}")
+        print(f"  Status:      {result.get('status', 'N/A')}")
+        print(f"  Resolution:  {result.get('resolution', 'PENDING')}")
+        print("=" * 60)
+
+    elif command == "disputes":
+        if len(sys.argv) < 3:
+            print("Usage: python3 agent.py disputes <agent_id>")
+            sys.exit(1)
+
+        agent_id = sys.argv[2]
+        print(f"Fetching disputes for: {agent_id}")
+        result = get_disputes(agent_id)
+
+        if "error" in result:
+            print(f"[FAILED] {result['error']}")
+            sys.exit(1)
+
+        print("=" * 60)
+        print("DISPUTE HISTORY")
+        print("=" * 60)
+        summary = result.get("summary", {})
+        print(f"  Filed:       {summary.get('total_filed', result.get('total', 0))}")
+        print(f"  Won:         {summary.get('won', 0)}")
+        print(f"  Lost:        {summary.get('lost', 0)}")
+        disputes = result.get("disputes", [])
+        if disputes:
+            print()
+            print("  Recent disputes:")
+            for d in disputes[:10]:
+                status = d.get("status", "N/A")
+                print(f"    {d.get('dispute_id', 'N/A')} | {d.get('proof_id', 'N/A')} | {status}")
+        print("=" * 60)
+
     else:
         print(f"Unknown command: {command}")
-        print("Use 'scan', 'pay', 'credits', or 'verify'")
+        print("Use 'scan', 'pay', 'credits', 'verify', 'reputation', 'dispute', or 'disputes'")
         sys.exit(1)
 
 

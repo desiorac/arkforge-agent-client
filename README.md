@@ -175,6 +175,67 @@ python3 agent.py pay --receipt-url "https://pay.stripe.com/receipts/payment/..."
 python3 agent.py verify prf_20260225_171714_4ebb28
 ```
 
+### 6. Check reputation
+
+```bash
+python3 agent.py reputation <agent_id>
+```
+
+```
+============================================================
+AGENT REPUTATION
+============================================================
+  Agent:       buyer_abc123
+  Score:       85/100
+  Dimensions:
+    reliability: 90
+    dispute_rate: 95
+    volume: 70
+    consistency: 85
+    longevity: 80
+  Penalties:   0
+  Signature:   ed25519:T3hY8kLm9nPq...(verified)
+============================================================
+```
+
+### 7. File a dispute
+
+```bash
+python3 agent.py dispute prf_20260301_120000_abc123 "Response was empty"
+```
+
+```
+============================================================
+DISPUTE FILED
+============================================================
+  Dispute ID:  disp_a1b2c3d4
+  Proof ID:    prf_20260301_120000_abc123
+  Status:      open
+  Resolution:  PENDING
+============================================================
+```
+
+### 8. View dispute history
+
+```bash
+python3 agent.py disputes <agent_id>
+```
+
+```
+============================================================
+DISPUTE HISTORY
+============================================================
+  Filed:       3
+  Won:         2
+  Lost:        1
+
+  Recent disputes:
+    disp_a1b2c3d4 | prf_20260301_120000_abc123 | UPHELD
+    disp_e5f6g7h8 | prf_20260228_090000_def456 | DENIED
+    disp_i9j0k1l2 | prf_20260227_150000_ghi789 | UPHELD
+============================================================
+```
+
 ### Example output
 
 ```
@@ -248,6 +309,10 @@ With `--receipt-url`, an additional section appears:
 | `proof.payment_evidence` | External receipt verification result (when `--receipt-url` was provided) |
 | `proof.payment_evidence.receipt_content_hash` | SHA-256 of raw receipt bytes — bound to chain hash |
 | `proof.payment_evidence.parsed_fields` | Extracted amount, currency, status, date (best-effort) |
+| `proof.transaction_success` | Whether the upstream service returned a success response (HTTP status < 400) |
+| `proof.upstream_status_code` | HTTP status code returned by the upstream service |
+| `proof.disputed` | Whether this proof has been disputed |
+| `proof.dispute_id` | Reference to the dispute record (e.g. `disp_a1b2c3d4`) |
 
 ## Commands
 
@@ -257,6 +322,9 @@ With `--receipt-url`, an additional section appears:
 | `python3 agent.py pay [--receipt-url URL] [--no-receipt]` | Payment + proof only (auto-attaches saved receipt) |
 | `python3 agent.py credits <amount>` | Buy prepaid credits — **saves receipt URL** for future calls |
 | `python3 agent.py verify <proof_id>` | Verify an existing proof (shows payment evidence if present) |
+| `python3 agent.py reputation <agent_id>` | Check agent reputation score (0-100) |
+| `python3 agent.py dispute <proof_id> "reason"` | File a dispute against a proof |
+| `python3 agent.py disputes <agent_id>` | View dispute history for an agent |
 
 ## Plans
 
@@ -279,7 +347,7 @@ With `--receipt-url`, an additional section appears:
 ```
 arkforge-agent-client/
   setup_card.py          # One-time: save payment method
-  agent.py               # scan / pay / credits / verify — all via Trust Layer
+  agent.py               # scan / pay / credits / verify / reputation / dispute / disputes
   .last_receipt.json     # Auto-saved Stripe receipt URL (gitignored)
   logs/                  # Transaction logs (JSON)
   proofs/                # Cryptographic proofs (JSON)
