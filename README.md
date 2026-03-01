@@ -290,6 +290,11 @@ arkforge-agent-client/
 
 Third-party provider support and multi-PSP payment verification are coming. See the [Trust Layer roadmap](https://github.com/ark-forge/trust-layer/blob/main/ROADMAP.md).
 
+---
+
+**Found this useful?** A ⭐ helps other developers building autonomous agent systems find this demo.
+Questions or feedback → [GitHub Discussions on the MCP scanner](https://github.com/ark-forge/mcp-eu-ai-act/discussions/8)
+
 ## License
 
 MIT
