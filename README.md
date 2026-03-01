@@ -1,90 +1,12 @@
 # ArkForge Agent Client
 
-[![GitHub Stars](https://img.shields.io/github/stars/ark-forge/arkforge-agent-client?style=flat&label=⭐%20Star%20this%20repo)](https://github.com/ark-forge/arkforge-agent-client/stargazers)
-
-If this demo is useful to you, a ⭐ on GitHub helps others find it.
-
-## What is this?
+[![GitHub Stars](https://img.shields.io/github/stars/ark-forge/arkforge-agent-client?style=flat&label=Star)](https://github.com/ark-forge/arkforge-agent-client/stargazers)
 
 A proof-of-concept demonstrating **autonomous agent-to-agent paid transactions** through the [ArkForge Trust Layer](https://github.com/ark-forge/trust-layer).
 
-One agent (this client) calls another agent (the [ArkForge MCP EU AI Act](https://github.com/ark-forge/mcp-eu-ai-act) scanner) to scan a code repository for EU AI Act compliance. Every transaction flows through the Trust Layer, which produces a tamper-proof cryptographic proof (SHA-256 chain + Ed25519 signature + RFC 3161 certified timestamp). Pro plan uses prepaid credits (0.10 EUR/proof) with Stripe payment as a witness.
-
-**Auto-receipt**: when you buy credits, the Stripe receipt URL is saved locally and auto-attached to subsequent calls as a 4th independent witness. No extra flags needed. Override with `--receipt-url` or skip with `--no-receipt`.
+One agent (this client) calls another agent (the [ArkForge MCP EU AI Act](https://github.com/ark-forge/mcp-eu-ai-act) scanner) to scan a code repository for EU AI Act compliance. Every transaction flows through the Trust Layer, which produces a tamper-proof cryptographic proof (SHA-256 chain + Ed25519 signature + RFC 3161 certified timestamp).
 
 No human clicks, no browser, no manual approval.
-
-## Quick usage
-
-```bash
-pip install requests
-export TRUST_LAYER_API_KEY="mcp_free_xxxx..."   # get one at https://arkforge.fr/en/signup.html
-python3 agent.py scan https://github.com/owner/repo
-```
-
-## Why does this matter?
-
-AI agents are starting to act on behalf of humans — browsing, coding, deploying. The next step is agents **paying for services autonomously**. But autonomous payments create a trust problem:
-
-- How does the buyer agent know it got what it paid for?
-- How does the seller agent prove it delivered?
-- How does the human owner verify what happened?
-
-## The Trust Layer
-
-Every transaction produces a chain of verifiable proofs:
-
-```
-Agent Client
-    |
-    v
-Trust Layer (/v1/proxy)
-    |--- Validates API key
-    |--- Debits prepaid credits (Pro only — Free skips this)
-    |--- Fetches external receipt if --receipt-url provided (optional)
-    |--- Forwards scan request to upstream API
-    |--- Hashes request + response (SHA-256 chain)
-    |--- Binds receipt content hash to chain (if present)
-    |--- Signs with Ed25519
-    |--- Submits to RFC 3161 TSA (certified timestamp)
-    |--- Returns proof + scan result
-    |
-    v
-Agent receives: scan report + cryptographic proof [+ payment evidence]
-```
-
-**Each layer is independently verifiable:**
-
-| Proof | Verified by | Can be faked? | Plan |
-|---|---|---|---|
-| Ed25519 signature | Verify with ArkForge public key | No (cryptographic) | All |
-| SHA-256 hash chain | Trust Layer verification URL | No (deterministic) | All |
-| RFC 3161 TSA | `openssl ts -verify` | No (certified by trusted TSA) | All |
-| Stripe receipt | Stripe dashboard (for credit purchase) | No (Stripe is source of truth) | Pro only |
-| External receipt | `--receipt-url` — fetched, hashed, bound to proof | No (SHA-256 of raw content) | All (optional) |
-| Scan result | Re-running scan on same repo | No (deterministic) | All |
-| Local log | `logs/*.json` + `proofs/*.json` | Tamper-evident (contains hashes) | All |
-
-### Triptyque de la Preuve
-
-Every transaction carries the ArkForge mark at 3 levels:
-
-| Level | Where | For whom | What |
-|-------|-------|----------|------|
-| **1 — Digital Stamp** | `service_response.body._arkforge_attestation` | Agents (JSON consumers) | Proof ID, seal URL, verification status |
-| **2 — Ghost Stamp** | HTTP response headers | Infra / monitoring | `X-ArkForge-Proof`, `X-ArkForge-Verified`, `X-ArkForge-Proof-ID`, `X-ArkForge-Trust-Link` |
-| **3 — Visual Stamp** | HTML proof page | Humans / legal | Colored badge (green/orange/red), full proof details |
-
-Open any proof in a browser: `https://arkforge.fr/trust/v/prf_...` — the short URL redirects to a self-contained HTML page with all verification details.
-
-## Transparency Notice
-
-Both this agent (buyer) and the ArkForge scan API (seller) are built and controlled by the same team (ArkForge). This is a proof-of-concept — not an attempt to simulate independent entities. The architecture is designed so that it **would work identically** between independent parties.
-
-## Prerequisites
-
-- Python 3.10+
-- `pip install requests`
 
 ## Quick Start
 
@@ -126,6 +48,7 @@ Before using the proxy, purchase prepaid credits. The Stripe receipt URL is **au
 **Via agent.py:**
 
 ```bash
+pip install requests
 export TRUST_LAYER_API_KEY="mcp_pro_..."
 python3 agent.py credits 10    # Buy 10 EUR = 100 proofs — receipt auto-saved
 ```
@@ -236,7 +159,7 @@ DISPUTE HISTORY
 ============================================================
 ```
 
-### Example output
+### Example scan output
 
 ```
 ============================================================
@@ -247,7 +170,7 @@ Target:      https://github.com/openai/openai-quickstart-python
 Price:       0.10 EUR (from prepaid credits)
 Trust Layer: https://arkforge.fr/trust/v1/proxy
 Scan API:    https://arkforge.fr/api/v1/scan-repo
-API Key:     mcp_test_93f...
+API Key:     mcp_te...
 
 [PAYMENT]
   Amount:    0.1 eur
@@ -261,7 +184,7 @@ API Key:     mcp_test_93f...
 
 [PROOF — Trust Layer]
   ID:           prf_20260225_171714_4ebb28
-  Spec:         1.0
+  Spec:         1.1
   Chain Hash:   sha256:5319f160352fea2c1889cf6dcbb9d1b431...
   Request Hash: sha256:0b801bccb76376504cb2c5f92c55cd7cfd...
   Signature:    ed25519:T3hY8k...(verified)
@@ -297,7 +220,100 @@ With `--receipt-url`, an additional section appears:
   Verified:  fetched
 ```
 
-### Proof fields
+## Library usage
+
+`agent.py` can be imported as a Python module:
+
+```python
+from agent import scan_repo, verify_proof, get_reputation, file_dispute, get_disputes
+
+# All functions return dicts — check for "error" key on failure
+result = scan_repo("https://github.com/owner/repo")
+if "error" in result:
+    print(result["error"])
+else:
+    proof = result["proof"]
+    print(proof["proof_id"])
+
+# Public endpoints (no API key required)
+rep = get_reputation("buyer_abc123")
+disputes = get_disputes("buyer_abc123")
+
+# Authenticated endpoints (TRUST_LAYER_API_KEY env var)
+result = file_dispute("prf_...", "Response was empty")
+```
+
+Config is read from environment variables at call time, so you can set them after import:
+
+```python
+import os
+os.environ["TRUST_LAYER_API_KEY"] = "mcp_pro_..."
+os.environ["TRUST_LAYER_BASE"] = "http://localhost:8100"  # local dev
+
+from agent import scan_repo
+result = scan_repo("https://github.com/owner/repo")
+```
+
+## Why does this matter?
+
+AI agents are starting to act on behalf of humans — browsing, coding, deploying. The next step is agents **paying for services autonomously**. But autonomous payments create a trust problem:
+
+- How does the buyer agent know it got what it paid for?
+- How does the seller agent prove it delivered?
+- How does the human owner verify what happened?
+
+## How the Trust Layer works
+
+Every transaction produces a chain of verifiable proofs:
+
+```
+Agent Client
+    |
+    v
+Trust Layer (/v1/proxy)
+    |--- Validates API key
+    |--- Debits prepaid credits (Pro only — Free skips this)
+    |--- Fetches external receipt if --receipt-url provided (optional)
+    |--- Forwards scan request to upstream API
+    |--- Hashes request + response (SHA-256 chain)
+    |--- Binds receipt content hash to chain (if present)
+    |--- Signs with Ed25519
+    |--- Submits to RFC 3161 TSA (certified timestamp)
+    |--- Returns proof + scan result
+    |
+    v
+Agent receives: scan report + cryptographic proof [+ payment evidence]
+```
+
+**Each layer is independently verifiable:**
+
+| Proof | Verified by | Can be faked? | Plan |
+|---|---|---|---|
+| Ed25519 signature | Verify with ArkForge public key | No (cryptographic) | All |
+| SHA-256 hash chain | Trust Layer verification URL | No (deterministic) | All |
+| RFC 3161 TSA | `openssl ts -verify` | No (certified by trusted TSA) | All |
+| Stripe receipt | Stripe dashboard (for credit purchase) | No (Stripe is source of truth) | Pro only |
+| External receipt | `--receipt-url` — fetched, hashed, bound to proof | No (SHA-256 of raw content) | All (optional) |
+| Scan result | Re-running scan on same repo | No (deterministic) | All |
+| Local log | `logs/*.json` + `proofs/*.json` | Tamper-evident (contains hashes) | All |
+
+### Three-layer proof system
+
+Every transaction carries the ArkForge mark at 3 levels:
+
+| Level | Where | For whom | What |
+|-------|-------|----------|------|
+| **1 — Digital Stamp** | `service_response.body._arkforge_attestation` | Agents (JSON consumers) | Proof ID, seal URL, verification status |
+| **2 — Ghost Stamp** | HTTP response headers | Infra / monitoring | `X-ArkForge-Verified`, `X-ArkForge-Proof-ID`, `X-ArkForge-Trust-Link` |
+| **3 — Visual Stamp** | HTML proof page | Humans / legal | Colored badge (green/orange/red), full proof details |
+
+Open any proof in a browser: `https://arkforge.fr/trust/v/prf_...` — the short URL redirects to a self-contained HTML page with all verification details.
+
+## Transparency Notice
+
+Both this agent (buyer) and the ArkForge scan API (seller) are built and controlled by the same team (ArkForge). This is a proof-of-concept — not an attempt to simulate independent entities. The architecture is designed so that it **would work identically** between independent parties.
+
+## Proof fields
 
 | Field | Description |
 |-------|-------------|
@@ -331,8 +347,13 @@ With `--receipt-url`, an additional section appears:
 | Key prefix | Plan | Stripe | Witnesses | Limits |
 |---|---|---|---|---|
 | `mcp_free_*` | Free | No | 3 (Ed25519, TSA, Archive.org) + optional external receipt | 100/month |
-| `mcp_test_*` | Test | Test mode (no real charges) | 3 + optional external receipt | Unlimited |
+| `mcp_test_*` | Test | Test mode (no real charges) | 3 + optional external receipt | Dev only |
 | `mcp_pro_*` | Pro | Prepaid credits (0.10 EUR/proof) | 3 (+ Stripe receipt) + optional external receipt | 100/day |
+
+## Prerequisites
+
+- Python 3.10+
+- `pip install requests`
 
 ## Environment variables
 
@@ -346,23 +367,22 @@ With `--receipt-url`, an additional section appears:
 
 ```
 arkforge-agent-client/
+  agent.py               # CLI + importable library (7 commands)
   setup_card.py          # One-time: save payment method
-  agent.py               # scan / pay / credits / verify / reputation / dispute / disputes
-  .last_receipt.json     # Auto-saved Stripe receipt URL (gitignored)
-  logs/                  # Transaction logs (JSON)
-  proofs/                # Cryptographic proofs (JSON)
   requirements.txt       # Only: requests
+  .last_receipt.json     # Auto-saved Stripe receipt URL (gitignored)
+  logs/                  # Transaction logs (JSON, gitignored)
+  proofs/                # Cryptographic proofs (JSON, gitignored)
 ```
 
 ## Roadmap
 
 Third-party provider support and multi-PSP payment verification are coming. See the [Trust Layer roadmap](https://github.com/ark-forge/trust-layer/blob/main/ROADMAP.md).
 
----
-
-**Found this useful?** A ⭐ helps other developers building autonomous agent systems find this demo.
-Questions or feedback → [GitHub Discussions on the MCP scanner](https://github.com/ark-forge/mcp-eu-ai-act/discussions/8)
-
 ## License
 
 MIT
+
+---
+
+Questions or feedback? Open an [issue](https://github.com/ark-forge/arkforge-agent-client/issues).
