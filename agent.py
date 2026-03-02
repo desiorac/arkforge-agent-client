@@ -73,21 +73,41 @@ def _get_api_key() -> str:
 # Receipt persistence
 # ---------------------------------------------------------------------------
 
+def _key_mode() -> str:
+    """Return 'test' if current API key is a test key, 'live' otherwise."""
+    key = _get_api_key()
+    return "test" if key.startswith("mcp_test_") else "live"
+
+
 def _save_receipt(receipt_url: str, amount: float = 0):
-    """Save last Stripe receipt URL for auto-attach on future calls."""
+    """Save last Stripe receipt URL with its Stripe mode for auto-attach on future calls."""
     RECEIPT_FILE.write_text(json.dumps({
         "receipt_url": receipt_url,
         "saved_at": datetime.now(timezone.utc).isoformat(),
         "amount": amount,
+        "mode": _key_mode(),
     }, indent=2))
 
 
 def _load_receipt() -> str:
-    """Load last saved receipt URL. Returns empty string if none."""
+    """Load last saved receipt URL.
+
+    Returns empty string if none, or if the saved receipt's Stripe mode
+    does not match the current API key mode (prevents attaching a test
+    receipt to a live/pro key or vice versa).
+    """
     if not RECEIPT_FILE.exists():
         return ""
     try:
         data = json.loads(RECEIPT_FILE.read_text())
+        saved_mode = data.get("mode", "live")
+        current_mode = _key_mode()
+        if saved_mode != current_mode:
+            print(f"[WARN] Saved receipt is from Stripe {saved_mode.upper()} mode "
+                  f"but current key is {current_mode.upper()} mode — skipping auto-attach.")
+            print(f"       Run 'python3 agent.py credits <amount>' to save a {current_mode} receipt.")
+            print()
+            return ""
         return data.get("receipt_url", "")
     except (json.JSONDecodeError, OSError):
         return ""
