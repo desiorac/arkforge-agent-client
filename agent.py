@@ -346,7 +346,7 @@ def _print_key_info():
 
 def _print_payment(result: dict):
     """Print payment details from proof."""
-    payment = result.get("proof", {}).get("payment", {})
+    payment = result.get("proof", {}).get("certification_fee", {})
     if not payment:
         return
     print("[PAYMENT]")
