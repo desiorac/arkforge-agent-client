@@ -14,11 +14,11 @@ Modes:
   dispute <proof_id> "reason" — File a dispute against a proof
   disputes <agent_id>        — View dispute history for an agent
 
-Receipt auto-attach:
-  After 'credits', the Stripe receipt URL is saved locally.
-  Subsequent 'scan' and 'pay' calls auto-attach it as payment evidence.
-  --receipt-url URL   Override with a specific receipt URL
-  --no-receipt        Skip auto-attach for this call
+Mode B — Payment evidence (external provider payment):
+  To attach a payment proof to a certification, pass the Stripe receipt URL
+  of a DIRECT payment made to the provider (not the ArkForge credit receipt).
+  ArkForge does not handle money — the agent pays the provider directly.
+    --receipt-url URL   Attach a direct provider payment receipt (Mode B)
 
 Prerequisites:
     pip install requests
@@ -40,12 +40,11 @@ from pathlib import Path
 import requests
 
 AGENT_IDENTITY = "arkforge-agent-client"
-AGENT_VERSION = "1.5.0"
+AGENT_VERSION = "1.6.0"
 
 TIMEOUT_SECONDS = 130
 LOG_DIR = Path(__file__).parent / "logs"
 PROOF_DIR = Path(__file__).parent / "proofs"
-RECEIPT_FILE = Path(__file__).parent / ".last_receipt.json"
 
 log = logging.getLogger("arkforge-agent")
 
@@ -67,50 +66,6 @@ def _get_api_key() -> str:
     if not key:
         key = os.environ.get("ARKFORGE_SCAN_API_KEY", "").strip()
     return key
-
-
-# ---------------------------------------------------------------------------
-# Receipt persistence
-# ---------------------------------------------------------------------------
-
-def _key_mode() -> str:
-    """Return 'test' if current API key is a test key, 'live' otherwise."""
-    key = _get_api_key()
-    return "test" if key.startswith("mcp_test_") else "live"
-
-
-def _save_receipt(receipt_url: str, amount: float = 0):
-    """Save last Stripe receipt URL with its Stripe mode for auto-attach on future calls."""
-    RECEIPT_FILE.write_text(json.dumps({
-        "receipt_url": receipt_url,
-        "saved_at": datetime.now(timezone.utc).isoformat(),
-        "amount": amount,
-        "mode": _key_mode(),
-    }, indent=2))
-
-
-def _load_receipt() -> str:
-    """Load last saved receipt URL.
-
-    Returns empty string if none, or if the saved receipt's Stripe mode
-    does not match the current API key mode (prevents attaching a test
-    receipt to a live/pro key or vice versa).
-    """
-    if not RECEIPT_FILE.exists():
-        return ""
-    try:
-        data = json.loads(RECEIPT_FILE.read_text())
-        saved_mode = data.get("mode", "live")
-        current_mode = _key_mode()
-        if saved_mode != current_mode:
-            print(f"[WARN] Saved receipt is from Stripe {saved_mode.upper()} mode "
-                  f"but current key is {current_mode.upper()} mode — skipping auto-attach.")
-            print(f"       Run 'python3 agent.py credits <amount>' to save a {current_mode} receipt.")
-            print()
-            return ""
-        return data.get("receipt_url", "")
-    except (json.JSONDecodeError, OSError):
-        return ""
 
 
 # ---------------------------------------------------------------------------
@@ -461,15 +416,12 @@ def _extract_receipt_url(args: list) -> str:
 
 
 def _resolve_receipt(args: list) -> str:
-    """Resolve receipt URL from CLI args or saved state."""
-    no_receipt = "--no-receipt" in args
-    receipt_url = _extract_receipt_url(args)
-    if not receipt_url and not no_receipt:
-        receipt_url = _load_receipt()
-        if receipt_url:
-            print(f"[AUTO] Using saved receipt: {receipt_url[:60]}...")
-            print()
-    return receipt_url
+    """Extract explicit Mode B receipt URL from CLI arguments.
+
+    The receipt must come from a direct Stripe payment to the provider —
+    NOT from buying credits at ArkForge (those are separate).
+    """
+    return _extract_receipt_url(args)
 
 
 def _require_arg(index: int, usage: str):
@@ -527,8 +479,9 @@ def _cmd_credits():
     print(f"  Proofs:    {result.get('proofs_available', 'N/A')} available")
     if result.get("receipt_url"):
         print(f"  Receipt:   {result['receipt_url']}")
-        _save_receipt(result["receipt_url"], amount)
-        print(f"  [AUTO] Receipt saved — will be attached to future scan/pay calls")
+        print(f"  NOTE: This receipt is your ArkForge credit purchase.")
+        print(f"        For Mode B proofs, use --receipt-url with a direct")
+        print(f"        provider payment receipt (not this one).")
     print()
     _save_log("credits", result, {"amount": amount})
     _print_header("DONE")
@@ -688,9 +641,8 @@ def main():
         print("  python3 agent.py dispute <proof_id> \"reason\"  # File a dispute")
         print("  python3 agent.py disputes <agent_id>    # View dispute history")
         print()
-        print("Receipt auto-attach (after buying credits):")
-        print("  --receipt-url URL   Override with a specific receipt")
-        print("  --no-receipt        Skip auto-attach for this call")
+        print("Mode B — payment evidence:")
+        print("  --receipt-url URL   Direct provider payment receipt (not ArkForge credits)")
         print()
         print("Setup:")
         print("  export TRUST_LAYER_API_KEY='mcp_pro_...'")
