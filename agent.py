@@ -345,12 +345,13 @@ def _print_key_info():
 
 
 def _print_payment(result: dict):
-    """Print payment details from proof."""
+    """Print ArkForge certification fee from proof."""
     payment = result.get("proof", {}).get("certification_fee", {})
     if not payment:
         return
-    print("[PAYMENT]")
-    print(f"  Amount:    {payment.get('amount', 'N/A')} {payment.get('currency', 'EUR')}")
+    print("[CERTIFICATION FEE — ArkForge]")
+    print(f"  Method:    {payment.get('method', 'N/A')}")
+    print(f"  Amount:    {payment.get('amount', 'N/A')} {payment.get('currency', 'EUR').upper()}")
     print(f"  Status:    {payment.get('status', 'N/A')}")
     print(f"  Txn ID:    {payment.get('transaction_id', 'N/A')}")
     if payment.get("receipt_url"):
@@ -364,7 +365,7 @@ def _print_provider_payment(result: dict):
     pe = proof.get("provider_payment")
     if not pe:
         return
-    print("[PAYMENT EVIDENCE — External Receipt]")
+    print("[PROVIDER PAYMENT — direct, not via ArkForge]")
     status = pe.get("receipt_fetch_status", "N/A")
     icon = "OK" if status == "fetched" else "FAILED"
     print(f"  Fetch:     {icon} ({status})")
