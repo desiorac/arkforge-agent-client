@@ -175,12 +175,29 @@ def _safe_json(resp: requests.Response) -> dict:
 
 
 def _error_result(resp: requests.Response) -> dict:
-    """Build a standardized error dict from a failed response."""
+    """Build a standardized error dict from a failed response.
+
+    If the body contains a proof (upstream error, credits exhausted, etc.),
+    bubble it up so the caller can still display it.
+    """
     try:
-        detail = resp.json()
+        body = resp.json()
     except (ValueError, requests.exceptions.JSONDecodeError):
-        detail = resp.text[:500]
-    return {"error": f"HTTP {resp.status_code}", "detail": detail}
+        return {"error": f"HTTP {resp.status_code}", "detail": resp.text[:500]}
+
+    result = {"error": f"HTTP {resp.status_code}"}
+    if isinstance(body, dict):
+        error_info = body.get("error") or body.get("detail")
+        if error_info:
+            result["detail"] = error_info
+        # Bubble up proof and service_response even on error
+        if "proof" in body:
+            result["proof"] = body["proof"]
+        if "service_response" in body:
+            result["service_response"] = body["service_response"]
+    else:
+        result["detail"] = str(body)[:500]
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -328,15 +345,24 @@ def _print_header(title: str):
 
 
 def _print_error(result: dict):
-    """Print error and exit. Returns True if error was found."""
+    """Print error. Exits unless a proof is present (upstream error with proof).
+
+    Returns True if an error was found (caller can check to skip scan results).
+    """
     if "error" not in result:
         return False
     print(f"[FAILED] {result['error']}")
     detail = result.get("detail")
     if detail:
-        text = json.dumps(detail, indent=2)[:500] if not isinstance(detail, str) else detail[:500]
-        print(f"  {text}")
-    sys.exit(1)
+        msg = detail.get("message") if isinstance(detail, dict) else detail
+        if msg:
+            print(f"  {str(msg)[:200]}")
+    if "proof" not in result:
+        sys.exit(1)
+    # Upstream error but proof was generated — continue to display it
+    print("[NOTE] Upstream failed but proof was generated — see below.")
+    print()
+    return True
 
 
 def _print_key_info():
@@ -608,24 +634,25 @@ def _cmd_scan(receipt_url: str):
     print()
 
     result = scan_repo(repo_url, receipt_url=receipt_url)
-    _print_error(result)
+    has_error = _print_error(result)
 
-    # Scan results (from upstream response)
-    svc = result.get("service_response", {})
-    upstream = svc.get("body", svc)
-    scan = upstream.get("scan_result", upstream)
-    report = scan.get("report", scan)
-    compliance = report.get("compliance_summary", {})
-    detected = scan.get("detected_models", report.get("detected_models", {}))
-    frameworks = list(detected.keys()) if isinstance(detected, dict) else []
+    # Scan results (from upstream response — skipped if upstream failed)
+    if not has_error:
+        svc = result.get("service_response", {})
+        upstream = svc.get("body", svc)
+        scan = upstream.get("scan_result", upstream)
+        report = scan.get("report", scan)
+        compliance = report.get("compliance_summary", {})
+        detected = scan.get("detected_models", report.get("detected_models", {}))
+        frameworks = list(detected.keys()) if isinstance(detected, dict) else []
 
-    print("[SCAN RESULT]")
-    score = compliance.get("compliance_score", "N/A")
-    pct = compliance.get("compliance_percentage", "N/A")
-    print(f"  Compliance:  {score} ({pct}%)" if pct != "N/A" else f"  Compliance:  {score}")
-    print(f"  Risk Cat:    {compliance.get('risk_category', 'N/A')}")
-    print(f"  Frameworks:  {', '.join(frameworks) if frameworks else 'none detected'}")
-    print()
+        print("[SCAN RESULT]")
+        score = compliance.get("compliance_score", "N/A")
+        pct = compliance.get("compliance_percentage", "N/A")
+        print(f"  Compliance:  {score} ({pct}%)" if pct != "N/A" else f"  Compliance:  {score}")
+        print(f"  Risk Cat:    {compliance.get('risk_category', 'N/A')}")
+        print(f"  Frameworks:  {', '.join(frameworks) if frameworks else 'none detected'}")
+        print()
 
     _print_full_proof(result)
     _save_log("scan", result, {"repo_url": repo_url})
