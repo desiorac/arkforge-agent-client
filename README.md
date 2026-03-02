@@ -85,6 +85,17 @@ To skip auto-attach for a single call:
 python3 agent.py scan https://github.com/owner/repo --no-receipt
 ```
 
+**Mode B PoC — pay the scan provider directly via Stripe:**
+
+```bash
+export STRIPE_SECRET_KEY="sk_test_..."       # your agent's Stripe key
+export STRIPE_PAYMENT_METHOD="pm_xxx"        # saved payment method
+export SCAN_PROVIDER_PRICE="100"             # optional, cents EUR (default: 100 = 1.00 EUR)
+python3 agent.py scan https://github.com/owner/repo --pay-provider
+```
+
+The agent creates a Stripe `PaymentIntent` off-session, retrieves the `receipt_url` from the resulting `Charge`, and attaches it automatically as `payment_evidence` to the Trust Layer call. ArkForge does not handle this money — the payment goes directly between agents.
+
 ### 4. Just pay (no scan)
 
 ```bash
@@ -208,7 +219,7 @@ API Key:     mcp_te...
 ============================================================
 ```
 
-With `--receipt-url`, an additional section appears:
+With `--receipt-url` or `--pay-provider`, an additional section appears:
 
 ```
 [PAYMENT EVIDENCE — External Receipt]
@@ -220,6 +231,23 @@ With `--receipt-url`, an additional section appears:
   Date:      February 28, 2026
   Verified:  fetched
 ```
+
+With `--pay-provider`, the Stripe payment is shown before the scan:
+
+```
+[MODE B] Paying scan provider directly via Stripe (1.00 EUR)...
+[MODE B] PaymentIntent: pi_3Pxxx
+[MODE B] Amount:        1.00 EUR
+[MODE B] Receipt:       https://pay.stripe.com/receipts/payment/CAcaFwoV...
+
+============================================================
+EU AI ACT COMPLIANCE SCAN — via Trust Layer
+============================================================
+...
+Receipt URL: https://pay.stripe.com/receipts/payment/CAcaFwoV...
+```
+
+The proof is emitted with `spec_version: 2.0` and includes `receipt_content_hash` in the chain.
 
 ## Library usage
 
@@ -335,7 +363,10 @@ Both this agent (buyer) and the ArkForge scan API (seller) are built and control
 
 | Command | Description |
 |---------|-------------|
-| `python3 agent.py scan <repo_url> [--receipt-url URL] [--no-receipt]` | Scan repo via Trust Layer (auto-attaches saved receipt) |
+| `python3 agent.py scan <repo_url>` | Scan repo via Trust Layer (auto-attaches saved receipt) |
+| `python3 agent.py scan <repo_url> --pay-provider` | Mode B PoC: pay provider via Stripe then scan (proof spec 2.0) |
+| `python3 agent.py scan <repo_url> --receipt-url URL` | Attach a manual provider receipt (Mode B, manual) |
+| `python3 agent.py scan <repo_url> --no-receipt` | Skip auto-attach for this call |
 | `python3 agent.py pay [--receipt-url URL] [--no-receipt]` | Payment + proof only (auto-attaches saved receipt) |
 | `python3 agent.py credits <amount>` | Buy prepaid credits — **saves receipt URL** for future calls |
 | `python3 agent.py verify <proof_id>` | Verify an existing proof (shows payment evidence if present) |
@@ -355,6 +386,7 @@ Both this agent (buyer) and the ArkForge scan API (seller) are built and control
 
 - Python 3.10+
 - `pip install requests`
+- `pip install stripe` (only for `--pay-provider`)
 
 ## Environment variables
 
@@ -363,6 +395,9 @@ Both this agent (buyer) and the ArkForge scan API (seller) are built and control
 | `TRUST_LAYER_API_KEY` | — | API key (required) |
 | `TRUST_LAYER_BASE` | `https://arkforge.fr/trust` | Trust Layer URL |
 | `SCAN_API_TARGET` | `https://arkforge.fr/api/v1/scan-repo` | Upstream scan endpoint |
+| `STRIPE_SECRET_KEY` | — | Agent's Stripe secret key (`sk_test_…` / `sk_live_…`) — Mode B only |
+| `STRIPE_PAYMENT_METHOD` | — | Saved Stripe payment method ID (`pm_…`) — Mode B only |
+| `SCAN_PROVIDER_PRICE` | `100` | Provider payment amount in cents EUR (100 = 1.00 EUR) — Mode B only |
 
 ## Architecture
 
@@ -370,7 +405,7 @@ Both this agent (buyer) and the ArkForge scan API (seller) are built and control
 arkforge-agent-client/
   agent.py               # CLI + importable library (7 commands)
   setup_card.py          # One-time: buy initial credits + save card via Stripe Checkout
-  requirements.txt       # Only: requests
+  requirements.txt       # requests + stripe (optional for --pay-provider)
   .last_receipt.json     # Auto-saved Stripe receipt URL (gitignored)
   logs/                  # Transaction logs (JSON, gitignored)
   proofs/                # Cryptographic proofs (JSON, gitignored)

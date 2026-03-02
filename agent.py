@@ -18,10 +18,14 @@ Mode B — Payment evidence (external provider payment):
   To attach a payment proof to a certification, pass the Stripe receipt URL
   of a DIRECT payment made to the provider (not the ArkForge credit receipt).
   ArkForge does not handle money — the agent pays the provider directly.
-    --receipt-url URL   Attach a direct provider payment receipt (Mode B)
+    --receipt-url URL   Attach a direct provider payment receipt (Mode B, manual)
+    --pay-provider      Pay the scan provider directly via Stripe, then attach
+                        the receipt automatically (Mode B PoC, automated).
+                        Requires: STRIPE_SECRET_KEY, STRIPE_PAYMENT_METHOD.
+                        Optional: SCAN_PROVIDER_PRICE (cents EUR, default 100).
 
 Prerequisites:
-    pip install requests
+    pip install requests stripe
     export TRUST_LAYER_API_KEY="mcp_pro_..."
 
 TRANSPARENCY NOTICE:
@@ -40,7 +44,7 @@ from pathlib import Path
 import requests
 
 AGENT_IDENTITY = "arkforge-agent-client"
-AGENT_VERSION = "1.6.0"
+AGENT_VERSION = "1.7.0"
 
 TIMEOUT_SECONDS = 130
 LOG_DIR = Path(__file__).parent / "logs"
@@ -66,6 +70,77 @@ def _get_api_key() -> str:
     if not key:
         key = os.environ.get("ARKFORGE_SCAN_API_KEY", "").strip()
     return key
+
+
+def _get_stripe_secret_key() -> str:
+    return os.environ.get("STRIPE_SECRET_KEY", "").strip()
+
+
+def _get_stripe_payment_method() -> str:
+    return os.environ.get("STRIPE_PAYMENT_METHOD", "").strip()
+
+
+def _get_scan_provider_price() -> int:
+    """Return scan provider price in cents EUR (default: 100 = 1.00 EUR)."""
+    try:
+        return int(os.environ.get("SCAN_PROVIDER_PRICE", "100"))
+    except ValueError:
+        return 100
+
+
+# ---------------------------------------------------------------------------
+# Mode B — Direct provider payment via Stripe
+# ---------------------------------------------------------------------------
+
+def _pay_provider_direct() -> dict:
+    """Pay the scan provider directly via Stripe (Mode B PoC, client-side only).
+
+    ArkForge does not handle this money — the payment goes directly from
+    this agent to the provider. The receipt_url is then attached to the
+    Trust Layer proxy call as payment_evidence.
+
+    Env vars:
+      STRIPE_SECRET_KEY      — sk_test_... or sk_live_...
+      STRIPE_PAYMENT_METHOD  — pm_xxx (saved payment method)
+      SCAN_PROVIDER_PRICE    — amount in cents EUR (default: 100 = 1.00 EUR)
+
+    Returns: { receipt_url, payment_intent_id, amount }
+    """
+    try:
+        import stripe as stripe_lib  # noqa: PLC0415
+    except ImportError:
+        return {"error": "stripe package not installed — run: pip install stripe>=7.0.0"}
+
+    secret_key = _get_stripe_secret_key()
+    payment_method = _get_stripe_payment_method()
+    amount = _get_scan_provider_price()
+
+    if not secret_key:
+        return {"error": "STRIPE_SECRET_KEY not set"}
+    if not payment_method:
+        return {"error": "STRIPE_PAYMENT_METHOD not set"}
+
+    stripe_lib.api_key = secret_key
+
+    pi = stripe_lib.PaymentIntent.create(
+        amount=amount,
+        currency="eur",
+        payment_method=payment_method,
+        confirm=True,
+        off_session=True,
+    )
+
+    receipt_url = ""
+    charge_id = pi.get("latest_charge")
+    if charge_id:
+        charge = stripe_lib.Charge.retrieve(charge_id)
+        receipt_url = charge.receipt_url or ""
+
+    return {
+        "receipt_url": receipt_url,
+        "payment_intent_id": pi.id,
+        "amount": amount,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -495,6 +570,21 @@ def _cmd_scan(receipt_url: str):
         print(f"[FAILED] Invalid URL: {repo_url!r} (expected http:// or https://)")
         sys.exit(1)
 
+    # Mode B PoC — pay provider directly via Stripe and auto-attach receipt
+    pay_provider = "--pay-provider" in sys.argv
+    if pay_provider:
+        provider_price = _get_scan_provider_price()
+        print(f"[MODE B] Paying scan provider directly via Stripe ({provider_price / 100:.2f} EUR)...")
+        payment = _pay_provider_direct()
+        if "error" in payment:
+            print(f"[FAILED] Stripe payment: {payment['error']}")
+            sys.exit(1)
+        receipt_url = payment["receipt_url"]
+        print(f"[MODE B] PaymentIntent: {payment['payment_intent_id']}")
+        print(f"[MODE B] Amount:        {payment['amount'] / 100:.2f} EUR")
+        print(f"[MODE B] Receipt:       {receipt_url[:60]}..." if receipt_url else "[MODE B] Receipt URL: not available")
+        print()
+
     ts = datetime.now(timezone.utc).isoformat()
     _print_header("EU AI ACT COMPLIANCE SCAN — via Trust Layer")
     print(f"Timestamp:   {ts}")
@@ -642,10 +732,15 @@ def main():
         print("  python3 agent.py disputes <agent_id>    # View dispute history")
         print()
         print("Mode B — payment evidence:")
-        print("  --receipt-url URL   Direct provider payment receipt (not ArkForge credits)")
+        print("  --receipt-url URL   Direct provider payment receipt (manual)")
+        print("  --pay-provider      Pay provider via Stripe + auto-attach receipt (PoC)")
+        print("                      Requires: STRIPE_SECRET_KEY, STRIPE_PAYMENT_METHOD")
+        print("                      Optional: SCAN_PROVIDER_PRICE (cents, default 100)")
         print()
         print("Setup:")
         print("  export TRUST_LAYER_API_KEY='mcp_pro_...'")
+        print("  export STRIPE_SECRET_KEY='sk_test_...'  # for --pay-provider")
+        print("  export STRIPE_PAYMENT_METHOD='pm_...'   # for --pay-provider")
         sys.exit(1)
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
