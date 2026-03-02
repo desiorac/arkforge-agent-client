@@ -94,7 +94,7 @@ export SCAN_PROVIDER_PRICE="100"             # optional, cents EUR (default: 100
 python3 agent.py scan https://github.com/owner/repo --pay-provider
 ```
 
-The agent creates a Stripe `PaymentIntent` off-session, retrieves the `receipt_url` from the resulting `Charge`, and attaches it automatically as `payment_evidence` to the Trust Layer call. ArkForge does not handle this money — the payment goes directly between agents.
+The agent creates a Stripe `PaymentIntent` off-session, retrieves the `receipt_url` from the resulting `Charge`, and attaches it automatically as `provider_payment` to the Trust Layer call. ArkForge does not handle this money — the payment goes directly between agents.
 
 ### 4. Just pay (no scan)
 
@@ -351,9 +351,9 @@ Both this agent (buyer) and the ArkForge scan API (seller) are built and control
 | `proof.arkforge_pubkey` | ArkForge's public key for verification |
 | `proof.upstream_timestamp` | Upstream service's `Date` header |
 | `proof.timestamp_authority.tsr_base64` | Embedded TSR file (base64, available after background processing) |
-| `proof.payment_evidence` | Provider payment receipt verification — present when `--receipt-url` or `--pay-provider` was used (Mode B). Not the ArkForge certification fee. |
-| `proof.payment_evidence.receipt_content_hash` | SHA-256 of raw receipt bytes — bound to chain hash (triggers spec 2.0) |
-| `proof.payment_evidence.parsed_fields` | Extracted amount, currency, status, date (best-effort) |
+| `proof.provider_payment` | Provider payment receipt verification — present when `--receipt-url` or `--pay-provider` was used (Mode B). Not the ArkForge certification fee. |
+| `proof.provider_payment.receipt_content_hash` | SHA-256 of raw receipt bytes — bound to chain hash (triggers spec 2.0) |
+| `proof.provider_payment.parsed_fields` | Extracted amount, currency, status, date (best-effort) |
 | `proof.transaction_success` | Whether the upstream service returned a success response (HTTP status < 400) |
 | `proof.upstream_status_code` | HTTP status code returned by the upstream service |
 | `proof.disputed` | Whether this proof has been disputed |

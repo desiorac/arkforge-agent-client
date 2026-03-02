@@ -97,7 +97,7 @@ def _pay_provider_direct() -> dict:
 
     ArkForge does not handle this money — the payment goes directly from
     this agent to the provider. The receipt_url is then attached to the
-    Trust Layer proxy call as payment_evidence.
+    Trust Layer proxy call as provider_payment.
 
     Env vars:
       STRIPE_SECRET_KEY      — sk_test_... or sk_live_...
@@ -197,7 +197,7 @@ def _call_proxy(target: str, payload: dict, description: str = "", method: str =
         "description": description,
     }
     if receipt_url:
-        body["payment_evidence"] = {
+        body["provider_payment"] = {
             "type": "stripe",
             "receipt_url": receipt_url,
         }
@@ -358,10 +358,10 @@ def _print_payment(result: dict):
     print()
 
 
-def _print_payment_evidence(result: dict):
+def _print_provider_payment(result: dict):
     """Print external payment evidence from proof."""
-    proof = result if "payment_evidence" in result else result.get("proof", {})
-    pe = proof.get("payment_evidence")
+    proof = result if "provider_payment" in result else result.get("proof", {})
+    pe = proof.get("provider_payment")
     if not pe:
         return
     print("[PAYMENT EVIDENCE — External Receipt]")
@@ -380,7 +380,7 @@ def _print_payment_evidence(result: dict):
             print(f"  Status:    {parsed['status']}")
         if parsed.get("date"):
             print(f"  Date:      {parsed['date']}")
-    verification = pe.get("payment_verification", "N/A")
+    verification = pe.get("verification_status", "N/A")
     print(f"  Verified:  {verification}")
     if pe.get("receipt_fetch_error"):
         print(f"  Error:     {pe['receipt_fetch_error']}")
@@ -446,7 +446,7 @@ def _print_full_proof(result: dict):
     """Print all proof sections (payment, proof, evidence, stamps)."""
     _print_payment(result)
     _print_proof(result)
-    _print_payment_evidence(result)
+    _print_provider_payment(result)
     _print_attestation(result)
     _print_ghost_stamp(result)
 
@@ -640,7 +640,7 @@ def _cmd_verify():
     _print_error(result)
 
     print(json.dumps(result, indent=2))
-    _print_payment_evidence(result)
+    _print_provider_payment(result)
 
 
 def _cmd_reputation():
