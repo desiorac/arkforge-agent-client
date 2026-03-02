@@ -1,50 +1,69 @@
 #!/usr/bin/env python3
 """
-Setup Payment Method — Save a card for paid scans.
+Setup Pro Account — Buy initial credits and save card via Stripe Checkout.
 
-Creates a Stripe Checkout Session (setup mode) to save a card.
-After setup, the webhook automatically creates your API key.
+The initial purchase (minimum 10 EUR = 100 proofs) is charged immediately.
+Your card is saved for future top-ups (no browser required next time).
+Your API key and credits are set up automatically after payment.
 
 Usage:
-    python3 setup_card.py your@email.com          # Live mode (real charges)
-    python3 setup_card.py your@email.com --test    # Test mode (no charges)
+    python3 setup_card.py your@email.com               # Live mode (real charges)
+    python3 setup_card.py your@email.com --test        # Test mode (Stripe test card)
+    python3 setup_card.py your@email.com --amount 20   # Buy 20 EUR = 200 proofs
 """
 
-import json
 import os
 import sys
 
 import requests
 
 API_BASE = os.environ.get("ARKFORGE_API_BASE", "https://arkforge.fr")
+MIN_AMOUNT = 10.0
 
 
 def main():
     if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
-        print("Usage: python3 setup_card.py <email> [--test]")
+        print("Usage: python3 setup_card.py <email> [--test] [--amount EUR]")
         print()
         print("Options:")
-        print("  --test    Use Stripe test mode (no real charges)")
+        print("  --test          Use Stripe test mode (no real charges)")
+        print("  --amount EUR    Credits to buy (default: 10 EUR = 100 proofs)")
         print()
         print("Examples:")
-        print("  python3 setup_card.py user@example.com          # Live")
-        print("  python3 setup_card.py user@example.com --test   # Test")
+        print("  python3 setup_card.py user@example.com")
+        print("  python3 setup_card.py user@example.com --test")
+        print("  python3 setup_card.py user@example.com --amount 20")
         sys.exit(1)
 
     email = sys.argv[1]
     test_mode = "--test" in sys.argv
 
+    amount = MIN_AMOUNT
+    if "--amount" in sys.argv:
+        idx = sys.argv.index("--amount")
+        try:
+            amount = float(sys.argv[idx + 1])
+        except (IndexError, ValueError):
+            print("[ERROR] --amount requires a number (e.g. --amount 20)")
+            sys.exit(1)
+
+    if amount < MIN_AMOUNT:
+        print(f"[ERROR] Minimum amount is {MIN_AMOUNT:.0f} EUR ({int(MIN_AMOUNT / 0.10)} proofs)")
+        sys.exit(1)
+
     mode_label = "TEST" if test_mode else "LIVE"
     key_prefix = "mcp_test_" if test_mode else "mcp_pro_"
+    proofs = int(amount / 0.10)
 
     print("=" * 60)
-    print("SETUP PAYMENT METHOD")
+    print("ARKFORGE TRUST LAYER — PRO SETUP")
     print("=" * 60)
-    print(f"Email: {email}")
-    print(f"Mode:  {mode_label}")
+    print(f"Email:   {email}")
+    print(f"Mode:    {mode_label}")
+    print(f"Amount:  {amount:.0f} EUR ({proofs} proofs)")
     print()
 
-    body = {"email": email}
+    body = {"email": email, "amount": amount}
     if test_mode:
         body["mode"] = "test"
 
@@ -60,20 +79,22 @@ def main():
 
     result = resp.json()
 
-    print("Open this URL to enter your card:")
+    print("Open this URL to complete payment:")
     print()
     print(f"  {result['checkout_url']}")
     print()
     if test_mode:
-        print("Test card: 4242 4242 4242 4242 (any expiry, any CVC)")
+        print("Test card: 4242 4242 4242 4242 (any future expiry, any CVC)")
         print()
-    print("After completing checkout:")
-    print("  1. Your API key will be sent by email automatically")
-    print(f"  2. Set it: export ARKFORGE_SCAN_API_KEY='{key_prefix}...'")
-    print("  3. Run:    python3 agent.py https://github.com/owner/repo")
+    print("After payment:")
+    print(f"  1. Your API key ({key_prefix}...) will be sent by email")
+    print(f"  2. {proofs} proofs will be credited automatically")
+    print(f"  3. Set it: export TRUST_LAYER_API_KEY='{key_prefix}...'")
+    print("  4. Run:    python3 agent.py scan https://github.com/owner/repo")
     print()
-    print(f"Session ID: {result.get('session_id', 'N/A')}")
-    print(f"Mode:       {result.get('mode', 'live').upper()}")
+    print(f"Session ID:      {result.get('session_id', 'N/A')}")
+    print(f"Proofs included: {result.get('proofs_included', proofs)}")
+    print(f"Mode:            {result.get('mode', 'live').upper()}")
     print("=" * 60)
 
 

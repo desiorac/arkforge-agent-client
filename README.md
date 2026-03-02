@@ -15,19 +15,19 @@ No human clicks, no browser, no manual approval.
 **Free plan** — no card required:
 
 ```bash
-curl -X POST https://arkforge.fr/trust/v1/keys/setup \
+curl -X POST https://arkforge.fr/trust/v1/keys/free-signup \
   -H "Content-Type: application/json" \
-  -d '{"email": "your@email.com", "plan": "free"}'
+  -d '{"email": "your@email.com"}'
 ```
 
 Your `mcp_free_*` API key will be emailed automatically. 100 calls/month, 3 witnesses (no Stripe).
 
-**Pro plan** — register a payment card (once):
+**Pro plan** — buy initial credits and save card (once):
 
 **Option A — via setup_card.py:**
 
 ```bash
-python3 setup_card.py your@email.com --test    # Test mode (no real charges)
+python3 setup_card.py your@email.com --test    # Test mode (Stripe test card)
 python3 setup_card.py your@email.com           # Live mode (real charges)
 ```
 
@@ -36,14 +36,14 @@ python3 setup_card.py your@email.com           # Live mode (real charges)
 ```bash
 curl -X POST https://arkforge.fr/trust/v1/keys/setup \
   -H "Content-Type: application/json" \
-  -d '{"email": "your@email.com", "mode": "test"}'
+  -d '{"email": "your@email.com", "mode": "test", "amount": 10}'
 ```
 
-Open the returned `checkout_url` in a browser and enter a card. For test mode, use Stripe test card `4242 4242 4242 4242` (any future expiry, any CVC). Your API key will be emailed automatically.
+Open the returned `checkout_url` in a browser. The initial purchase (minimum 10 EUR = 100 proofs) is charged immediately and your card is saved for future top-ups. For test mode, use Stripe test card `4242 4242 4242 4242` (any future expiry, any CVC). Your API key and credits are set up automatically after payment.
 
-### 2. Buy credits (Pro plan)
+### 2. Top up credits (Pro plan)
 
-Before using the proxy, purchase prepaid credits. The Stripe receipt URL is **automatically saved** for future calls.
+Buy more credits any time — the saved card is charged directly, no browser required.
 
 **Via agent.py:**
 
@@ -60,9 +60,10 @@ curl -X POST https://arkforge.fr/trust/v1/credits/buy \
   -H "Content-Type: application/json" \
   -H "X-Api-Key: mcp_pro_..." \
   -d '{"amount": 10}'
+# Returns: {"credits_added": 10.0, "balance": 10.0, "proofs_available": 100, ...}
 ```
 
-Each proof costs 0.10 EUR. Min 1 EUR, max 100 EUR. Credits are deducted automatically on each proxy call.
+Each proof costs 0.10 EUR. Min 1 EUR, max 100 EUR. Credits are deducted automatically on each proxy call. Credits never expire.
 
 ### 3. Run a scan
 
@@ -368,7 +369,7 @@ Both this agent (buyer) and the ArkForge scan API (seller) are built and control
 ```
 arkforge-agent-client/
   agent.py               # CLI + importable library (7 commands)
-  setup_card.py          # One-time: save payment method
+  setup_card.py          # One-time: buy initial credits + save card via Stripe Checkout
   requirements.txt       # Only: requests
   .last_receipt.json     # Auto-saved Stripe receipt URL (gitignored)
   logs/                  # Transaction logs (JSON, gitignored)
