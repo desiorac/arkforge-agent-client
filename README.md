@@ -20,7 +20,7 @@ curl -X POST https://arkforge.fr/trust/v1/keys/free-signup \
   -d '{"email": "your@email.com"}'
 ```
 
-Your `mcp_free_*` API key will be emailed automatically. 100 calls/month, 3 witnesses (no Stripe).
+Your `mcp_free_*` API key will be emailed automatically. 100 calls/month, 2 witnesses (no Stripe).
 
 **Pro plan** — buy initial credits and save card (once):
 
@@ -378,9 +378,9 @@ Both this agent (buyer) and the ArkForge scan API (seller) are built and control
 
 | Key prefix | Plan | Stripe | Witnesses | Limits |
 |---|---|---|---|---|
-| `mcp_free_*` | Free | No | 3 (Ed25519, TSA, Archive.org) + optional external receipt | 100/month |
-| `mcp_test_*` | Test | Test mode (no real charges) | 3 + optional external receipt | Dev only |
-| `mcp_pro_*` | Pro | Prepaid credits (0.10 EUR/proof) | 3 (+ Stripe receipt) + optional external receipt | 100/day |
+| `mcp_free_*` | Free | No | 2 (Ed25519, RFC 3161 TSA) + optional external receipt | 100/month |
+| `mcp_test_*` | Test | Test mode (no real charges) | 2 + optional external receipt | Dev only |
+| `mcp_pro_*` | Pro | Prepaid credits (0.10 EUR/proof) | 2 (+ Stripe receipt) + optional external receipt | 100/day |
 
 ## Prerequisites
 
