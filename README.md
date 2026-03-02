@@ -351,8 +351,8 @@ Both this agent (buyer) and the ArkForge scan API (seller) are built and control
 | `proof.arkforge_pubkey` | ArkForge's public key for verification |
 | `proof.upstream_timestamp` | Upstream service's `Date` header |
 | `proof.timestamp_authority.tsr_base64` | Embedded TSR file (base64, available after background processing) |
-| `proof.payment_evidence` | External receipt verification result (when `--receipt-url` was provided) |
-| `proof.payment_evidence.receipt_content_hash` | SHA-256 of raw receipt bytes — bound to chain hash |
+| `proof.payment_evidence` | Provider payment receipt verification — present when `--receipt-url` or `--pay-provider` was used (Mode B). Not the ArkForge certification fee. |
+| `proof.payment_evidence.receipt_content_hash` | SHA-256 of raw receipt bytes — bound to chain hash (triggers spec 2.0) |
 | `proof.payment_evidence.parsed_fields` | Extracted amount, currency, status, date (best-effort) |
 | `proof.transaction_success` | Whether the upstream service returned a success response (HTTP status < 400) |
 | `proof.upstream_status_code` | HTTP status code returned by the upstream service |
