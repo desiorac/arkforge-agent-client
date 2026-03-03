@@ -4,7 +4,7 @@
 
 A proof-of-concept demonstrating **autonomous agent-to-agent paid transactions** through the [ArkForge Trust Layer](https://github.com/ark-forge/trust-layer).
 
-One agent (this client) calls another agent (the [ArkForge MCP EU AI Act](https://github.com/ark-forge/mcp-eu-ai-act) scanner) to scan a code repository for EU AI Act compliance. Every transaction flows through the Trust Layer, which produces a tamper-proof cryptographic proof (SHA-256 chain + Ed25519 signature + RFC 3161 certified timestamp).
+One agent (this client) calls another agent (the [ArkForge MCP EU AI Act](https://github.com/ark-forge/mcp-eu-ai-act) scanner) to scan a code repository for EU AI Act compliance. Every transaction flows through the Trust Layer, which produces a tamper-proof cryptographic proof (SHA-256 chain + Ed25519 signature + RFC 3161 certified timestamp + Sigstore Rekor public log entry).
 
 No human clicks, no browser, no manual approval.
 
@@ -20,7 +20,7 @@ curl -X POST https://arkforge.fr/trust/v1/keys/free-signup \
   -d '{"email": "your@email.com"}'
 ```
 
-Your `mcp_free_*` API key will be emailed automatically. 100 calls/month, 2 witnesses (no Stripe).
+Your `mcp_free_*` API key will be emailed automatically. 100 calls/month, 3 witnesses (Ed25519, RFC 3161, Sigstore Rekor — no Stripe required).
 
 **Pro plan** — buy initial credits and save card (once):
 
@@ -322,6 +322,7 @@ Agent receives: scan report + cryptographic proof [+ payment evidence]
 | Ed25519 signature | Verify with ArkForge public key | No (cryptographic) | All |
 | SHA-256 hash chain | Trust Layer verification URL | No (deterministic) | All |
 | RFC 3161 TSA | `openssl ts -verify` | No (certified by trusted TSA) | All |
+| Sigstore Rekor | [search.sigstore.dev](https://search.sigstore.dev) — public log by Linux Foundation | No (append-only public log) | All |
 | Stripe receipt | Stripe dashboard (for credit purchase) | No (Stripe is source of truth) | Pro only |
 | External receipt | `--receipt-url` — fetched, hashed, bound to proof | No (SHA-256 of raw content) | All (optional) |
 | Scan result | Re-running scan on same repo | No (deterministic) | All |
@@ -379,9 +380,9 @@ Both this agent (buyer) and the ArkForge scan API (seller) are built and control
 
 | Key prefix | Plan | Stripe | Witnesses | Limits |
 |---|---|---|---|---|
-| `mcp_free_*` | Free | No | 2 (Ed25519, RFC 3161 TSA) + optional external receipt | 100/month |
-| `mcp_test_*` | Test | Test mode (no real charges) | 2 + optional external receipt | Dev only |
-| `mcp_pro_*` | Pro | Prepaid credits (0.10 EUR/proof) | 2 (+ Stripe receipt) + optional external receipt | 100/day |
+| `mcp_free_*` | Free | No | 3 (Ed25519, RFC 3161 TSA, Sigstore Rekor) + optional external receipt | 100/month |
+| `mcp_test_*` | Test | Test mode (no real charges) | 3 + optional external receipt | Dev only |
+| `mcp_pro_*` | Pro | Prepaid credits (0.10 EUR/proof) | 3 (+ Stripe receipt) + optional external receipt | 100/day |
 
 ## Prerequisites
 

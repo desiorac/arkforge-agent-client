@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0] - 2026-03-03
+
+### Added
+- Display Sigstore Rekor entry in `_print_proof()` output
+  - `Rekor: verified (logIndex=<N>)` when transparency log is present
+  - `Rekor URL: https://search.sigstore.dev/?logIndex=<N>` for direct public verification
+
 ## [1.7.0] - 2026-03-03
 
 ### Changed

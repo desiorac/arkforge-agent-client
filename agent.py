@@ -443,6 +443,13 @@ def _print_proof(result: dict):
         print(f"  Upstream:     {proof['upstream_timestamp']}")
     if tsa:
         print(f"  TSA:          {tsa.get('status', 'N/A')}")
+    tlog = proof.get("transparency_log") or {}
+    if tlog.get("status") == "verified":
+        log_index = tlog.get("log_index")
+        verify_url = tlog.get("verify_url", "")
+        print(f"  Rekor:        verified (logIndex={log_index})")
+        if verify_url:
+            print(f"  Rekor URL:    {verify_url}")
     print()
 
 
