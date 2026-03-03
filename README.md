@@ -6,7 +6,8 @@ A proof-of-concept demonstrating **autonomous agent-to-agent paid transactions**
 
 One agent (this client) calls another agent (the [ArkForge MCP EU AI Act](https://github.com/ark-forge/mcp-eu-ai-act) scanner) to scan a code repository for EU AI Act compliance. Every transaction flows through the Trust Layer, which produces a tamper-proof cryptographic proof (SHA-256 chain + Ed25519 signature + RFC 3161 certified timestamp + Sigstore Rekor public log entry).
 
-No human clicks, no browser, no manual approval.
+**Free tier:** fully autonomous — the agent signs up and runs with a single curl, no card required.
+**Pro tier:** one-time human setup (Stripe Checkout to save a card), fully autonomous after that.
 
 ## Quick Start
 
