@@ -681,17 +681,15 @@ def _cmd_reputation():
 
     _print_header("AGENT REPUTATION")
     print(f"  Agent:       {result.get('agent_id', agent_id)}")
-    print(f"  Score:       {result.get('score', 'N/A')}/100")
-    dims = result.get("dimensions", {})
-    if dims:
-        print("  Dimensions:")
-        for dim, val in dims.items():
-            print(f"    {dim}: {val}")
-    penalties = result.get("penalties", [])
-    if penalties:
-        print(f"  Penalties:   {len(penalties)}")
-        for p in penalties[:5]:
-            print(f"    - {p.get('reason', p)}")
+    print(f"  Score:       {result.get('reputation_score', 'N/A')}/100")
+    scoring = result.get("scoring", {})
+    if scoring:
+        print(f"  Success rate:  {scoring.get('success_rate', 'N/A')}%")
+        print(f"  Confidence:    {scoring.get('confidence', 'N/A')}")
+        print(f"  Formula:       {scoring.get('formula', 'N/A')}")
+    if result.get("identity_mismatch"):
+        print("  Penalty:     identity mismatch (−15)")
+    print(f"  Total proofs:  {result.get('total_proofs', 'N/A')}")
     if result.get("signature"):
         print(f"  Signature:   {str(result['signature'])[:30]}...")
     print("=" * 60)

@@ -120,18 +120,19 @@ python3 agent.py reputation <agent_id>
 ============================================================
 AGENT REPUTATION
 ============================================================
-  Agent:       buyer_abc123
+  Agent:       sha256:buyer_abc123...
   Score:       85/100
-  Dimensions:
-    reliability: 90
-    dispute_rate: 95
-    volume: 70
-    consistency: 85
-    longevity: 80
-  Penalties:   0
+  Success rate:  100.0%
+  Confidence:    0.85
+  Formula:       floor(success_rate × confidence) − penalties
+  Total proofs:  10
   Signature:   ed25519:T3hY8kLm9nPq...(verified)
 ============================================================
 ```
+
+The score is publicly auditable: `score = floor(success_rate × confidence)`.
+Confidence grows with volume (0.60 at 1 proof → 1.00 at 20+ proofs).
+One optional penalty: −15 if the agent changed its declared identity.
 
 ### 7. File a dispute
 
