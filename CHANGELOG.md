@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.8.1] - 2026-03-16
+
+### Changed (no code change — Trust Layer v1.3.0 API update)
+- `verify_proof(proof_id)` — `GET /v1/proof/{id}` now returns a privacy-filtered response. The following fields are no longer visible publicly: `parties` (buyer/seller identity), `certification_fee` amounts, `provider_payment.receipt_url`, `provider_payment.parsed_fields` (amount, status, date), `buyer_reputation_score`, `buyer_profile_url`. `_print_provider_payment()` and `_print_payment()` will silently skip these fields when called on a verified proof.
+- To access the full proof (including payment details), use `GET /v1/proof/{id}/full` with your API key (owner only). No client helper added yet — use `requests.get()` directly with `headers={"X-Api-Key": YOUR_KEY}`.
+
 ## [1.8.0] - 2026-03-03
 
 ### Added
